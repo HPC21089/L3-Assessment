@@ -10,12 +10,15 @@ import pygame
 
 #Initialize
 pygame.init()
-window = pygame.display.set_mode(1280, 720)
+WINDOW = pygame.display.set_mode((1280, 720))
 pygame.display.set_caption("Dance Dance Dance: Zombie Apocalypsse")
-clock = pygame.time.Clock()
+CLOCK = pygame.time.Clock()
 
 #Variables
-FRAME_RATE = 60 #caps because it is a constant
+FRAME_RATE = 60 
+
+background = pygame.image.load('images/DDDZA-Background.png')
+background = pygame.transform.scale_by(background, 5)
 
 #Game loop
 while True:
@@ -24,6 +27,7 @@ while True:
             pygame.quit()
             exit()
 
+    WINDOW.blit(background, (0,0))
     
-    clock.tick(FRAME_RATE)
+    CLOCK.tick(FRAME_RATE)
     pygame.display.update()
