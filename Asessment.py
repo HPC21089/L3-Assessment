@@ -16,7 +16,7 @@ CLOCK = pygame.time.Clock()
 pygame.font.init()
 
 #Variables
-FRAME_RATE = 60 
+FRAME_RATE = 60
 font_big = pygame.font.SysFont('freedom-font - Shortcut.lnk', 50)
 font_medium = pygame.font.SysFont('freedom-font - Shortcut.lnk', 35)
 font_small = pygame.font.SysFont('freedom-font - Shortcut.lnk', 25)
@@ -28,6 +28,12 @@ ultimate_charge = 0
 cooldown = 0
 ultimate_status = False
 player_health = 100 #ENTIRELEY TEMP VARIABLE ONLY HERE 'TIL CLASSES
+game_state = "active" #ENTIRELEY TEMP VARIABLE ONLY HERE 'TIL CLASSES
+pause_level = 0
+arrow_limit = 0
+arrow_pos = 1
+inputs = []
+max_inputs = 4
 
 def draw_text(text, font, color, x, y):
     text = font.render(text, True, color)
@@ -252,7 +258,7 @@ def cooldown_charge():
 
     WINDOW.blit(cooldown_gauge, (935,600))
 
-def arrows_animation():
+def arrows_functionality():
     if key_pressed[pygame.K_LEFT]:
         left_arrow = left_arrow_pressed
         WINDOW.blit(left_arrow, (425,565))
@@ -346,7 +352,7 @@ def ui_blit(key_pressed):
     # -----Display text-----
     #Wave number
     if wave_num <= 9:
-        draw_text("Wave: " + str(wave_num), font_medium, WHITE, 595, 10)
+        draw_text("Wave: " + str(wave_num), font_medium, WHITE, 596, 10)
     elif wave_num <= 99:
         draw_text("Wave: " + str(wave_num), font_medium, WHITE, 595, 10) #CHANGE X POS FOR SPACING, 2 didgits
     
@@ -372,10 +378,42 @@ def ui_blit(key_pressed):
     draw_text("Cooldown", font_small, WHITE, 1027.5, 575)
 
     #-----Arrows-----
-    arrows_animation()
+    arrows_functionality()
 
     #-----Health Bar-----
     player_health_sprite()
+        
+def pause_screen(arrow_limit):
+    #Gray overlay
+    overlay = pygame.Surface((1280, 720), pygame.SRCALPHA)  
+    overlay.fill((128, 128, 128, 150))
+    WINDOW.blit(overlay, (0, 0))
+
+    #Esc to play
+    WINDOW.blit(esc_bg, (25, 25))
+    draw_text("esc", font_small, BLACK, 31, 35)
+    draw_text("to play", font_small, WHITE, 70, 35)
+    draw_text("Z to confirm", font_small, WHITE, 31, 75)
+
+    if pause_level == 1:
+        #Selection Text
+        draw_text("ENEMIES", font_big, WHITE, 562.5, 135)
+        draw_text("MOVES", font_big, WHITE, 577.5, 265)
+        draw_text("ACHIEVEMENTS", font_big, WHITE, 502.5, 400)
+        draw_text("QUIT", font_big, WHITE, 597.5, 535)
+
+        arrow_limit = 4
+        
+        if arrow_pos == 1:
+            WINDOW.blit(selection_arrow, (480, 125))
+        elif arrow_pos == 2:
+            WINDOW.blit(selection_arrow, (495, 255))
+        elif arrow_pos == 3:
+            WINDOW.blit(selection_arrow, (420, 390))
+        elif arrow_pos == 4:
+            WINDOW.blit(selection_arrow, (515, 525))
+
+    return arrow_limit
 
 #Loading background
 background = pygame.transform.scale_by(pygame.image.load('images/DDDZA-Background.png'), 5)
@@ -525,7 +563,11 @@ hb_96 = pygame.transform.scale_by(pygame.image.load('images/health bar/HB-96%.pn
 hb_100 = pygame.transform.scale_by(pygame.image.load('images/health bar/HB-100%.png'), 5)
 hb_empty = pygame.transform.scale_by(pygame.image.load('images/health bar/HB-Empty.png'), 5)
 
+#Loading Escape Image
 esc_bg = pygame.transform.scale_by(pygame.image.load('images/esc.png'), 5)
+
+#Loading Selection Arrow
+selection_arrow = pygame.transform.scale_by(pygame.image.load('images/arrow.png'), 5)
 
 #Game loop
 if __name__ == "__main__":
@@ -534,14 +576,57 @@ if __name__ == "__main__":
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
+            
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_ESCAPE:
+                    #Setting the switch for changing game states + resetting variables
+                    if game_state == "active":
+                        game_state = "paused"
+                        pause_level = 1
+                        arrow_pos = 1
+                    elif game_state == "paused":
+                        game_state = "active"
+                        pause_level = 0
+                        arrow_pos = 1
+
+            if game_state == "paused":
+                #Selection arrow movement
+                if event.type == pygame.KEYUP:
+                    if event.key == pygame.K_DOWN:
+                        arrow_pos += 1
+                    elif event.key == pygame.K_UP:
+                        arrow_pos -= 1
+
+            if game_state == "active":
+                #Combo input tracking
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_LEFT:
+                        inputs.append('left')
+                    if event.key == pygame.K_RIGHT:
+                        inputs.append('right')
+                    if event.key == pygame.K_UP:
+                        inputs.append('up')
+                    if event.key == pygame.K_DOWN:
+                        inputs.append('down')
+                
+                #Limits the number of recorded inpits at a time to 0
+                if len(inputs) > max_inputs:
+                    inputs.pop(0)
+                    
+        key_pressed = pygame.key.get_pressed()
 
         WINDOW.blit(background, (0,0))
-        
-        game_active = True #This is temp for now just setting up the UI
 
-        if game_active:
-            key_pressed = pygame.key.get_pressed()
-            ui_blit(key_pressed)
+        if game_state == "active":
+            ui_blit(key_pressed)  
+        elif game_state == "paused":   
+            arrow_limit = pause_screen(arrow_limit)
+            if arrow_pos > arrow_limit:
+                arrow_pos = arrow_limit
+            elif arrow_pos <= 0:
+                arrow_pos = 1
         
+        print(inputs)
+
         CLOCK.tick(FRAME_RATE)
         pygame.display.update()
