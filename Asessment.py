@@ -38,21 +38,22 @@ cooldown = False
 ultimate_status = False
 
 COMBOS = {
-    'failed combo': {'name': 'Failed', 'damage': 0, 'cooldown time': 0, 'charge unit': 0},
-    'combo1': {'name': 'Standard Up', 'damage': 5, 'cooldown time': 5, 'charge unit': 10, 'input combo': ['up', 'up', 'up', 'up']},
-    'combo2': {'name': 'Standard Down', 'damage' : 5, 'cooldown time': 5, 'charge unit': 10, 'input combo': ['down', 'down', 'down', 'down']},
-    'combo3': {'name': 'Standard Left', 'damage': 5, 'cooldown time': 5, 'charge unit': 10, 'input combo': ['left', 'left', 'left', 'left']},
-    'combo4': {'name': 'Standard Right', 'damage': 5, 'cooldown time': 5, 'charge unit': 10, 'input combo': ['right', 'right', 'right', 'right']},
-    'combo5': {'name': 'Floss', 'damage': 7, 'cooldown time': 7, 'charge unit': 15, 'input combo': ['left', 'right', 'left', 'right']},
-    'combo6': {'name': 'The Hype', 'damage': 7, 'cooldown time': 7, 'charge unit': 15, 'input combo': ['up', 'up', 'down', 'down']},
+    'failed combo': {'name': 'Failed', 'damage': 0, 'cooldown level': 100, 'charge unit': 0},
+    'combo1': {'name': 'Standard Up', 'damage': 5, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['up', 'up', 'up', 'up']},
+    'combo2': {'name': 'Standard Down', 'damage' : 5, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['down', 'down', 'down', 'down']},
+    'combo3': {'name': 'Standard Left', 'damage': 5, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['left', 'left', 'left', 'left']},
+    'combo4': {'name': 'Standard Right', 'damage': 5, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['right', 'right', 'right', 'right']},
+    'combo5': {'name': 'Floss', 'damage': 7, 'cooldown level': 7, 'charge unit': 15, 'input combo': ['left', 'right', 'left', 'right']},
+    'combo6': {'name': 'The Hype', 'damage': 7, 'cooldown level': 7, 'charge unit': 15, 'input combo': ['up', 'up', 'down', 'down']},
 
-    'ultimate combo': {'name': 'Ultimate Combo', 'damage': 1000000000, 'cooldown time': 0, 'charge unit': -100, 'input combo': ['up', 'left', 'down', 'right']}
+    'ultimate combo': {'name': 'Ultimate Combo', 'damage': 1000000000, 'cooldown level': 1000000000, 'charge unit': 0, 'input combo': ['up', 'left', 'down', 'right']}
 }
 
 def draw_text(text, font, color, x, y):
     text = font.render(text, True, color)
     WINDOW.blit(text, (x, y))
 
+#-----ULTIMATE CHARGE LOAD AND BLIT-----
 def load_uc_images(start=2, end=100, step=2, scale=5):
     uc_images = {}
     for i in range(start, end + 1, step):
@@ -72,10 +73,11 @@ def ultimate_blit():
 
     WINDOW.blit(ultimate_gauge, (75, 600))
 
+#-----COOLDOWN LOAD AND BLIT-----
 def load_c_images(start=2, end=100, step=2, scale=5):
     c_images = {}
     for i in range(start, end + 1, step):
-        path = f'images/gauges/ultimate-charge/UC-{i}%.png'
+        path = f'images/gauges/cooldown/C-{i}%.png'
         c_image = pygame.image.load(path)
         scaled_image = pygame.transform.scale_by(c_image, scale)
         c_images[i] = scaled_image
@@ -86,10 +88,19 @@ def cooldown_blit():
         cooldown_gauge = gauge_0
     else:
         clamped_c_charge = min(max(2, int(cooldown_charge // 2 * 2)), 100)
-        cooldown_gauge = ultimate_charge_images.get(clamped_c_charge, gauge_0)
+        cooldown_gauge = cooldown_charge_images.get(clamped_c_charge, gauge_0)
 
     WINDOW.blit(cooldown_gauge, (935,600))
 
+def on_cooldown(cooldown, cooldown_charge):
+    if cooldown:
+        cooldown_charge -= COMBOS[output_combo]['cooldown level']
+        if cooldown_charge <= 0:
+            cooldown_charge = 0
+            cooldown = False
+    return cooldown, cooldown_charge
+
+#-----HEALTH BAR LOAD AND BLIT-----
 def load_hb_images(start=4, end=100, step=4, scale=5):
     hb_images = {}
     for i in range(start, end + 1, step):
@@ -108,6 +119,7 @@ def hb_blit():
 
     WINDOW.blit(health_bar, (1125,30))
 
+#-----PLAYER INPUTS REACTIVITY-----
 def arrows_functionality():
     if key_pressed[pygame.K_LEFT]:
         left_arrow = left_arrow_pressed
@@ -126,7 +138,6 @@ def arrows_functionality():
     if key_pressed[pygame.K_DOWN]:
         down_arrow = down_arrow_pressed
         WINDOW.blit(down_arrow, (665,565))
-
     else:
         down_arrow = down_arrow_base
         WINDOW.blit(down_arrow, (660,560))
@@ -199,11 +210,6 @@ def inputs_display():
     WINDOW.blit(inputs1, (480, 530))
     WINDOW.blit(inputs2, (510, 530))
     WINDOW.blit(inputs3, (540, 530))
-
-    if ultimate_charge >= 100:
-        ultimate_status = True
-    else: 
-        ultimate_status = False
         
     if ultimate_status:
         WINDOW.blit(mini_arrow_up, (110, 530))
@@ -211,6 +217,7 @@ def inputs_display():
         WINDOW.blit(mini_arrow_down, (170, 530))
         WINDOW.blit(mini_arrow_right, (200, 530))
 
+#-----CHECK FOR COMBOS-----
 def check_combo():
     #Regular combos
     if inputs == COMBOS['combo1']['input combo']:
@@ -225,16 +232,14 @@ def check_combo():
         output_combo = 'combo5'
     elif inputs == COMBOS['combo6']['input combo']:
         output_combo = 'combo6'
+    elif inputs == COMBOS['ultimate combo']['input combo']:
+            output_combo = 'ultimate combo'
     else: 
         output_combo = 'failed combo'
-
-    if ultimate_status:
-        if inputs == COMBOS['ultimate combo']['input combo']:
-            output_combo = 'ultimate combo'
-        else:
-            output_combo = 'failed combo'
+        
     return output_combo
 
+#-----DISPLAY GAME UI-----
 def ui_blit(key_pressed):
     """Displays all parts of the base game UI"""
     # -----Display text-----
@@ -272,6 +277,7 @@ def ui_blit(key_pressed):
     #-----Health Bar-----
     hb_blit()    
         
+#DISPLAY PAUSE SCREEN
 def pause_screen(arrow_limit):
     #Gray overlay
     overlay = pygame.Surface((1280, 720), pygame.SRCALPHA)  
@@ -394,9 +400,17 @@ if __name__ == "__main__":
                         #Executing a combo
                         if event.key == pygame.K_z:
                             output_combo = check_combo()
-                            print(COMBOS[output_combo]['name'])
-                            inputs = []
-                            ultimate_charge += COMBOS[output_combo]['charge unit']
+                            if output_combo == 'ultimate combo':
+                                if ultimate_status:
+                                    inputs = []
+                                    ultimate_charge = 0
+                                else:
+                                    output_combo = 'failed combo'
+                            else:
+                                inputs = []
+                                ultimate_charge += COMBOS[output_combo]['charge unit']
+                                cooldown = True
+                                cooldown_charge = 100
                         #Clearing combo list
                         if event.key == pygame.K_x:
                             inputs = []
@@ -434,8 +448,14 @@ if __name__ == "__main__":
         
         WINDOW.blit(player, (player_x, player_y))
 
+        if ultimate_charge >= 100:
+            ultimate_status = True
+        else: 
+            ultimate_status = False
+
         if game_state == "active": #Blit game ui
             ui_blit(key_pressed)
+            cooldown, cooldown_charge = on_cooldown(cooldown, cooldown_charge)
         elif game_state == "paused": #Blit pause screen, restrict arrow
             #Blit pause screen
             arrow_limit = pause_screen(arrow_limit)
