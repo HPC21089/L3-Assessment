@@ -66,14 +66,21 @@ COMBOS = {
 }
 
 
-class Character:
-    def __init__(self, health, damage, speed, x, y, sprite):
+class Character(pygame.sprite.Sprite):
+    def __init__(self, health, damage, speed, x, y, sprite, frame1, frame2, frame3):
+        super().__init__()
         self.health = health
         self.damage = damage
         self.speed = speed
-        self.x = x
-        self.y = y
+        self.rect = self.sprite.get_rect()
+        self.rect.x = x
+        self.rect.y = y
         self.sprite = sprite
+
+        self.animation_frames = [frame1, frame2, frame3]
+        self.current_frame_index = 0
+        self.image = self.animation_frames[self.current_frame_index]
+
 
     def copy(self):
         return Character(
@@ -85,32 +92,58 @@ class Character:
             self.sprite 
         )
     
-    def animations(walk):
-        snothler1 = pygame.transform.scale_by(pygame.image.load('images/enemies/Snothler-1.png'), 5)
-        snothler2 = pygame.transform.scale_by(pygame.image.load('images/enemies/Snothler-2.png'), 5)
-        boulder_bro_stationary = pygame.transform.scale_by(pygame.image.load('images/enemies/Boulder-Bro-Stationary.png'), 5)
-        boulder_bro_walking_1 = pygame.transform.scale_by(pygame.image.load('images/enemies/Boulder-bro-walking-1.png'), 5)
-        boulder_bro_walking_2 = pygame.transform.scale_by(pygame.image.load('images/enemies/Boulder-Bro-walking-2.png'), 5)
-        little_timmy_sprite = pygame.transform.scale_by(pygame.image.load('images/enemies/Little-Timmy.png'), 5)
-        the_vulture_sprite = pygame.transform.scale_by(pygame.image.load('images/enemies/The-Vulture.png'), 5)
+    def update():
+        for enemy in enemy_group:
+            if enemy.x > 600:
+                enemy.x -= wave.enemy_type.speed
+            elif enemy.x < 600:
+                enemy.x += wave.enemy_type.speed
 
-        snothler_animation = [snothler1, snothler2]
-        snothler.sprite = snothler_animation[walk]
+    def animate(self, direction=1):
+        self.current_frame_index += direction
+        if self.current_frame_index >= len(self.animation_frames):
+            self.current_frame_index = 0
+        elif self.current_frame_index < 0:
+            self.current_frame_index = len(self.animation_frames) - 1
 
-        boulder_bro_animation = [boulder_bro_walking_1, boulder_bro_stationary, boulder_bro_walking_2]
-        boulder_bro.sprite = boulder_bro_animation[walk]
+        self.image = self.animation_frames[self.current_frame_index]
+        self.rect = self.image.get_rect(center=self.rect.center)
 
-        little_timmy.sprite = little_timmy_sprite
-
-        the_vulture.sprite = the_vulture_sprite
 
 player = Character(100, None, None, None, None, None)
+
 snothler = Character(50, 15, 2.5, 0, 0, None)
+snothler_frames = [
+    pygame.transform.scale_by(pygame.image.load('images/enemies/Snothler-1.png'), 5),
+    pygame.transform.scale_by(pygame.image.load('images/enemies/Snothler-2.png'), 5)
+]
+snothler.animation_frames = snothler_frames
+snothler.image = snothler.animation_frames[0]
+snothler.current_frame_index = 0
+snothler.rect = snothler.image.get_rect()
+
 boulder_bro = Character(100, 30, 1, 0, 0, None)
+boulder_bro_frames = [
+    pygame.transform.scale_by(pygame.image.load('images/enemies/Boulder-bro-walking-1.png'), 5),
+    pygame.transform.scale_by(pygame.image.load('images/enemies/Boulder-Bro-Stationary.png'), 5),
+    pygame.transform.scale_by(pygame.image.load('images/enemies/Boulder-Bro-walking-2.png'), 5)
+]
+boulder_bro.animation_frames = boulder_bro_frames
+boulder_bro.image = boulder_bro.animation_frames[0]
+boulder_bro.current_frame_index = 0
+boulder_bro.rect = boulder_bro.image.get_rect()
+
 little_timmy = Character(20, 5, 50, 0, 0, None)
+little_timmy_sprite = pygame.transform.scale_by(pygame.image.load('images/enemies/Little-Timmy.png'), 5)
+little_timmy.sprite = little_timmy_sprite
+
 the_vulture = Character(75, 30, 20, 0, 0, None)
+the_vulture_sprite = pygame.transform.scale_by(pygame.image.load('images/enemies/The-Vulture.png'), 5)
+the_vulture.sprite = the_vulture_sprite
+
 patient_zero = Character(100, 0, 0, 0, 0, None)
 
+enemy_group = pygame.sprite.Group()
 
 class Wave:
     def __init__(self, enemy_type, enemies_left, time_between):
@@ -137,20 +170,13 @@ class Wave:
             enemy_status = True
 
             if enemy_status:
-                self.enemy_list.append(self.enemy_type.copy())
-                self.enemy_list[-1].x = self.enemy_x
+                enemy_group.add(self.enemy_type.copy())
+                enemy.rect.x = self.enemy_x
+                enemy.rect.y = self.enemy_y
             self.last_spawn_time = current_time
         
         return self.enemy_x, self.enemy_y
-    
-    def enemy_movement(self):
-        for enemy in self.enemy_list:
-            WINDOW.blit(enemy.sprite, (enemy.x, enemy.y))
-            if enemy.x > 600:
-                enemy.x -= wave.enemy_type.speed
-            elif enemy.x < 600:
-                enemy.x += wave.enemy_type.speed
-
+        
 wave1 = Wave(snothler, 10, 5)
 wave2 = Wave(boulder_bro, 5, 5)
 wave3 = Wave(little_timmy, 15, 5)
@@ -584,13 +610,8 @@ if __name__ == "__main__":
                 exit()        
             
             if event.type == ANIMATION:
-                current_time = pygame.time.get_ticks()
-                walk += walk_direction
-                if walk >= 1:
-                    walk_direction = -1
-                elif walk <= 0:
-                    walk_direction = 1
-                last_update_time = current_time
+                for enemy in enemy_group:
+                    enemy.animate(walk_direction)
 
             if event.type == pygame.KEYDOWN:
                 
@@ -731,7 +752,8 @@ if __name__ == "__main__":
             cooldown, cooldown_charge = on_cooldown(cooldown, cooldown_charge)
 
             enemy_x, enemy_y = wave.enemy_spawn()
-            wave.enemy_movement()
+            enemy_group.draw(WINDOW)
+            enemy_group.update()
         
             #Blit game ui 
             ui_blit(key_pressed, wave)
@@ -740,8 +762,5 @@ if __name__ == "__main__":
             #Blit pause screen
             arrow_limit = pause_screen(arrow_limit)
         
-
-        print('test')
-        print('test again')
         CLOCK.tick(FRAME_RATE)
         pygame.display.update()
