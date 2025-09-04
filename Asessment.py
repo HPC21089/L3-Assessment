@@ -5,17 +5,26 @@ School: Hauraki Plains College
 Date: 03/06/2024
 """
 
-# Imports
-import pygame, json
+# ---------------------------------- IMPORTS ----------------------------------
 
-#Initialize
+
+import pygame, json, random, copy
+from copy import deepcopy
+
+
+# ---------------------------------- INITIIALIZING ----------------------------------
+
+
 pygame.init()
 WINDOW = pygame.display.set_mode((1280, 720))
-pygame.display.set_caption("Dance Dance Dance: Zombie Apocalypsse")
+pygame.display.set_caption("Dance Dance Zombie Revolution")
 CLOCK = pygame.time.Clock()
 pygame.font.init()
 
-#Variables
+
+# ---------------------------------- VARIABLES ----------------------------------
+
+
 FRAME_RATE = 60
 font_big = pygame.font.SysFont('freedom-font - Shortcut.lnk', 50)
 font_medium = pygame.font.SysFont('freedom-font - Shortcut.lnk', 35)
@@ -23,7 +32,7 @@ font_small = pygame.font.SysFont('freedom-font - Shortcut.lnk', 25)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 wave_num = 0
-enemies_left = 100 #Temporary for now just to set up UI
+wave = 0
 ultimate_charge = 0
 cooldown_charge = 0
 ultimate_status = False
@@ -37,27 +46,116 @@ arrow_pos = 1
 inputs = []
 max_inputs = 4
 player_name = ''
+enemy_list = []
+walk = 0
+walk_direction = 1
+last_update_time = 0
+animation_delay = 150
+enemy = 0
 
 COMBOS = {
     'failed combo': {'name': 'Failed', 'damage': 0, 'cooldown level': 100, 'charge unit': 0},
-    'combo1': {'name': 'Standard Up', 'damage': 5, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['up', 'up', 'up', 'up']},
-    'combo2': {'name': 'Standard Down', 'damage' : 5, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['down', 'down', 'down', 'down']},
-    'combo3': {'name': 'Standard Left', 'damage': 5, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['left', 'left', 'left', 'left']},
-    'combo4': {'name': 'Standard Right', 'damage': 5, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['right', 'right', 'right', 'right']},
-    'combo5': {'name': 'Floss', 'damage': 7, 'cooldown level': 3.5, 'charge unit': 15, 'input combo': ['left', 'right', 'left', 'right']},
-    'combo6': {'name': 'The Hype', 'damage': 7, 'cooldown level': 3.5, 'charge unit': 15, 'input combo': ['up', 'up', 'down', 'down']},
+    'combo1': {'name': 'Standard Up', 'damage': 10, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['up', 'up', 'up', 'up']},
+    'combo2': {'name': 'Standard Down', 'damage' : 10, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['down', 'down', 'down', 'down']},
+    'combo3': {'name': 'Standard Left', 'damage': 10, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['left', 'left', 'left', 'left']},
+    'combo4': {'name': 'Standard Right', 'damage': 10, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['right', 'right', 'right', 'right']},
+    'combo5': {'name': 'Floss', 'damage': 15, 'cooldown level': 3.5, 'charge unit': 15, 'input combo': ['left', 'right', 'left', 'right']},
+    'combo6': {'name': 'The Hype', 'damage': 15, 'cooldown level': 3.5, 'charge unit': 15, 'input combo': ['up', 'up', 'down', 'down']},
 
     'ultimate combo': {'name': 'Ultimate Combo', 'damage': 1000000000, 'cooldown level': 1000000000, 'charge unit': 0, 'input combo': ['up', 'left', 'down', 'right']}
 }
 
 
 class Character:
-    def __init__(self, health, damage, speed):
+    def __init__(self, health, damage, speed, x, y, sprite):
         self.health = health
         self.damage = damage
         self.speed = speed
+        self.x = x
+        self.y = y
+        self.sprite = sprite
+
+    def copy(self):
+        return Character(
+            self.health,
+            self.damage,
+            self.speed,
+            self.x,
+            self.y,
+            self.sprite 
+        )
     
+    def animations(walk):
+        snothler1 = pygame.transform.scale_by(pygame.image.load('images/enemies/Snothler-1.png'), 5)
+        snothler2 = pygame.transform.scale_by(pygame.image.load('images/enemies/Snothler-2.png'), 5)
+        boulder_bro_stationary = pygame.transform.scale_by(pygame.image.load('images/enemies/Boulder-Bro-Stationary.png'), 5)
+        boulder_bro_walking_1 = pygame.transform.scale_by(pygame.image.load('images/enemies/Boulder-bro-walking-1.png'), 5)
+        boulder_bro_walking_2 = pygame.transform.scale_by(pygame.image.load('images/enemies/Boulder-Bro-walking-2.png'), 5)
+        little_timmy_sprite = pygame.transform.scale_by(pygame.image.load('images/enemies/Little-Timmy.png'), 5)
+        the_vulture_sprite = pygame.transform.scale_by(pygame.image.load('images/enemies/The-Vulture.png'), 5)
+
+        snothler_animation = [snothler1, snothler2]
+        snothler.sprite = snothler_animation[walk]
+
+        boulder_bro_animation = [boulder_bro_walking_1, boulder_bro_stationary, boulder_bro_walking_2]
+        boulder_bro.sprite = boulder_bro_animation[walk]
+
+        little_timmy.sprite = little_timmy_sprite
+
+        the_vulture.sprite = the_vulture_sprite
+
+player = Character(100, None, None, None, None, None)
+snothler = Character(50, 15, 2.5, 0, 0, None)
+boulder_bro = Character(100, 30, 1, 0, 0, None)
+little_timmy = Character(20, 5, 50, 0, 0, None)
+the_vulture = Character(75, 30, 20, 0, 0, None)
+patient_zero = Character(100, 0, 0, 0, 0, None)
+
+
+class Wave:
+    def __init__(self, enemy_type, enemies_left, time_between):
+        self.enemy_type = enemy_type
+        self.enemies_left = enemies_left
+        self.time_between = time_between
+        self.last_spawn_time = 0
+        self.enemy_x = 0
+        self.enemy_y = 0
+        self.enemy_list = []
+
+    def enemy_spawn(self):
+        current_time = pygame.time.get_ticks()
+        enemy_status = False
+
+        if current_time - self.last_spawn_time >= self.time_between * 1000:
+            edge = random.choice(['left', 'right'])
+
+            if edge == 'left':
+                self.enemy_x = 0
+                pygame.transform.flip(enemy.sprite, False, True)
+            else:
+                self.enemy_x = 1000
+            enemy_status = True
+
+            if enemy_status:
+                self.enemy_list.append(self.enemy_type.copy())
+                self.enemy_list[-1].x = self.enemy_x
+            self.last_spawn_time = current_time
+        
+        return self.enemy_x, self.enemy_y
     
+    def enemy_movement(self):
+        for enemy in self.enemy_list:
+            WINDOW.blit(enemy.sprite, (enemy.x, enemy.y))
+            if enemy.x > 600:
+                enemy.x -= wave.enemy_type.speed
+            elif enemy.x < 600:
+                enemy.x += wave.enemy_type.speed
+
+wave1 = Wave(snothler, 10, 5)
+wave2 = Wave(boulder_bro, 5, 5)
+wave3 = Wave(little_timmy, 15, 5)
+wave4 = Wave(the_vulture, 10, 5)
+wave5 = Wave(patient_zero, 1, 5)
 
 def draw_text(text, font, color, x, y):
     text = font.render(text, True, color)
@@ -121,7 +219,7 @@ def load_hb_images(start=4, end=100, step=4, scale=5):
     return hb_images
 
 def hb_blit():
-    if player_health == 0:
+    if player.health == 0:
         health_bar = hb_empty
     else:
         clamped_player_health = min(max(4, int(player_health // 4 * 4)), 100)
@@ -279,8 +377,38 @@ def player_pointing():
 
     WINDOW.blit(player, (player_x, player_y))
 
+def set_wave(wave):
+    if wave_num == 1:
+        wave = wave1
+    elif wave_num == 2:
+        wave = wave2
+    elif wave_num == 3:
+        wave = wave3
+    elif wave_num == 4:
+        wave = wave4
+    elif wave_num == 5:
+        wave = wave5
+    else:
+        pass
+
+    return wave
+
+def set_enemy(enemy):
+    if wave_num == 1:
+        enemy = snothler
+    elif wave_num == 2:
+        enemy = boulder_bro
+    elif wave_num == 3:
+        enemy = little_timmy
+    elif wave_num == 4:
+        enemy = the_vulture
+    else:
+        enemy = patient_zero
+    
+    return enemy
+
 #-----DISPLAY GAME UI-----
-def ui_blit(key_pressed):
+def ui_blit(key_pressed, wave):
     """Displays all parts of the base game UI"""
     # -----Display text-----
     #Wave number
@@ -290,12 +418,10 @@ def ui_blit(key_pressed):
         draw_text("Wave: " + str(wave_num), font_medium, WHITE, 595, 10) #CHANGE X POS FOR SPACING, 2 didgits
     
     #Enemies left
-    if enemies_left <= 999:
-        draw_text("Enemies Left: " + str(enemies_left), font_medium, WHITE, 545, 687)
-    elif enemies_left <= 99:
-        draw_text("Enemies Left: " + str(enemies_left), font_medium, WHITE, 545, 687) #CHANGE X POS FOR SPACING, 2 didgits
-    elif enemies_left <= 9:
-        draw_text("Enemies Left: " + str(enemies_left), font_medium, WHITE, 545, 687) #CHANGE X POS FOR SPACING, single digit
+    if wave.enemies_left <= 99:
+        draw_text("Enemies Left: " + str(wave.enemies_left), font_medium, WHITE, 545, 687) #CHANGE X POS FOR SPACING, 2 didgits
+    elif wave.enemies_left <= 9:
+        draw_text("Enemies Left: " + str(wave.enemies_left), font_medium, WHITE, 545, 687) #CHANGE X POS FOR SPACING, single digit
 
     draw_text(player_name, font_small, WHITE, 1135, 15)
 
@@ -397,19 +523,24 @@ def start_screen(arrow_limit):
 
     return arrow_limit
 
+
+# ---------------------------------- SPRITES ----------------------------------
+
+
+#Placeholder image
 blank = pygame.transform.scale_by(pygame.image.load('images/Blank.png'), 5)
 
 #Loading background
 background = pygame.transform.scale_by(pygame.image.load('images/DDDZA-Background.png'), 5)
 
-#-----Loading the gauge sprites-----#
+#Gauge sprites
 gauge_0 = pygame.transform.scale_by(pygame.image.load('images/gauges/Gauge-0%.png'), 5)
 hb_empty = pygame.transform.scale_by(pygame.image.load('images/health bar/HB-Empty.png'), 5)
 ultimate_charge_images = load_uc_images()
 cooldown_charge_images = load_c_images()
 hb_images = load_hb_images()
 
-#Loading arrows
+#Arrows
 up_arrow_base = pygame.transform.scale_by(pygame.image.load('images/arrows/up-arrow.png'), 5)
 up_arrow_pressed = pygame.transform.scale_by(pygame.image.load('images/arrows/up-arrow-pressed.png'), 5)
 down_arrow_base = pygame.transform.scale_by(pygame.image.load('images/arrows/down-arrow.png'), 5)
@@ -419,19 +550,19 @@ left_arrow_pressed = pygame.transform.scale_by(pygame.image.load('images/arrows/
 right_arrow_base = pygame.transform.scale_by(pygame.image.load('images/arrows/right-arrow.png'), 5)
 right_arrow_pressed = pygame.transform.scale_by(pygame.image.load('images/arrows/right-arrow-pressed.png'), 5)
 
-#Loading Escape Image
+#Escape Image
 esc_bg = pygame.transform.scale_by(pygame.image.load('images/esc.png'), 5)
 
-#Loading Selection Arrow
+#Selection Arrow
 selection_arrow = pygame.transform.scale_by(pygame.image.load('images/arrows/Arrow.png'), 5)
 
-#Loading mini arrows that tell you what your inputs currently look like
+#Mini arrows that tell you what your inputs currently look like
 mini_arrow_up = pygame.transform.scale_by(pygame.image.load('images/arrows/Input-list-up.png'), 5)
 mini_arrow_down = pygame.transform.scale_by(pygame.image.load('images/arrows/Input-list-down.png'), 5)
 mini_arrow_left = pygame.transform.scale_by(pygame.image.load('images/arrows/Input-list-left.png'), 5)
 mini_arrow_right = pygame.transform.scale_by(pygame.image.load('images/arrows/Input-list-right.png'), 5)
 
-#Loading Player Sprites
+#Player Sprites
 player_default = pygame.transform.scale_by(pygame.image.load('images/Player/Player-Standard.png'), 5)
 player_pointing_up = pygame.transform.scale_by(pygame.image.load('images/Player/Pointing/Player-Pointing-Up.png'), 5)
 player_pointing_down = pygame.transform.scale_by(pygame.image.load('images/Player/Pointing/Player-Pointing-Down.png'), 5)
@@ -440,13 +571,26 @@ player_pointing_right = pygame.transform.scale_by(pygame.image.load('images/Play
 
 logo = pygame.transform.scale_by(pygame.image.load('images/Logo.png'), 5)
 
+
+ANIMATION = pygame.USEREVENT
+pygame.time.set_timer(ANIMATION, 750)
+
 #Game loop
 if __name__ == "__main__":
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-                exit()                
+                exit()        
+            
+            if event.type == ANIMATION:
+                current_time = pygame.time.get_ticks()
+                walk += walk_direction
+                if walk >= 1:
+                    walk_direction = -1
+                elif walk <= 0:
+                    walk_direction = 1
+                last_update_time = current_time
 
             if event.type == pygame.KEYDOWN:
                 
@@ -543,10 +687,13 @@ if __name__ == "__main__":
                         game_state = "active"
                         pause_level = "base"
                         arrow_pos = 1
+                
                 if event.key == pygame.K_RETURN:
                     if start_level == "new player":
                             if arrow_pos == 1 and player_name != '':
                                 game_state = "active"
+                                wave_num = 1
+                                last_spawn_time = current_time
 
                 #Selection arrow movement
                 if game_state == "paused" or game_state == "start":
@@ -558,6 +705,10 @@ if __name__ == "__main__":
         key_pressed = pygame.key.get_pressed()
 
         WINDOW.blit(background, (0,0))
+
+        wave = set_wave(wave)
+        enemy = set_enemy(enemy)
+        Character.animations(walk)
         
         #Keeping the selection arrow only on 
         if arrow_pos > arrow_limit:
@@ -576,12 +727,15 @@ if __name__ == "__main__":
             arrow_limit = start_screen(arrow_limit)
 
         elif game_state == "active":
-            #Blit game ui 
-            ui_blit(key_pressed)
-
             #Cooldown animation
             cooldown, cooldown_charge = on_cooldown(cooldown, cooldown_charge)
+
+            enemy_x, enemy_y = wave.enemy_spawn()
+            wave.enemy_movement()
         
+            #Blit game ui 
+            ui_blit(key_pressed, wave)
+            
         elif game_state == "paused":
             #Blit pause screen
             arrow_limit = pause_screen(arrow_limit)
