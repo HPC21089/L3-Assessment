@@ -742,5 +742,6 @@ if __name__ == "__main__":
         
 
         print('test')
+        print('test again')
         CLOCK.tick(FRAME_RATE)
         pygame.display.update()
