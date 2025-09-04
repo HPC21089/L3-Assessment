@@ -740,5 +740,7 @@ if __name__ == "__main__":
             #Blit pause screen
             arrow_limit = pause_screen(arrow_limit)
         
+
+        print('test')
         CLOCK.tick(FRAME_RATE)
         pygame.display.update()
