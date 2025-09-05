@@ -52,6 +52,8 @@ walk_direction = 1
 last_update_time = 0
 animation_delay = 150
 enemy = 0
+walk = 0
+walk_direction = 1
 
 COMBOS = {
     'failed combo': {'name': 'Failed', 'damage': 0, 'cooldown level': 100, 'charge unit': 0},
@@ -65,39 +67,40 @@ COMBOS = {
     'ultimate combo': {'name': 'Ultimate Combo', 'damage': 1000000000, 'cooldown level': 1000000000, 'charge unit': 0, 'input combo': ['up', 'left', 'down', 'right']}
 }
 
-
 class Character(pygame.sprite.Sprite):
-    def __init__(self, health, damage, speed, x, y, sprite, frame1, frame2, frame3):
+    def __init__(self, health, damage, speed, x=0, y=0, animation_frames=None):
         super().__init__()
         self.health = health
         self.damage = damage
         self.speed = speed
-        self.rect = self.sprite.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-        self.sprite = sprite
-
-        self.animation_frames = [frame1, frame2, frame3]
+        self.animation_frames = animation_frames or []
         self.current_frame_index = 0
-        self.image = self.animation_frames[self.current_frame_index]
 
+        # Ensure there is at least a 1x1 transparent image so rect math always works
+        if self.animation_frames:
+            self.image = self.animation_frames[0]
+        else:
+            self.image = pygame.Surface((1, 1), pygame.SRCALPHA)
+
+        self.rect = self.image.get_rect()
+        self.rect.x = int(x) if x is not None else 0
+        self.rect.y = int(y) if y is not None else 0
 
     def copy(self):
         return Character(
             self.health,
             self.damage,
             self.speed,
-            self.x,
-            self.y,
-            self.sprite 
+            self.rect.x,
+            self.rect.y,
+            self.animation_frames[:]
         )
     
-    def update():
-        for enemy in enemy_group:
-            if enemy.x > 600:
-                enemy.x -= wave.enemy_type.speed
-            elif enemy.x < 600:
-                enemy.x += wave.enemy_type.speed
+    def update(self):
+        if self.rect.x > 600:
+            self.rect.x -= self.speed
+        elif self.rect.x < 600:
+            self.rect.x += self.speed
 
     def animate(self, direction=1):
         self.current_frame_index += direction
@@ -108,7 +111,6 @@ class Character(pygame.sprite.Sprite):
 
         self.image = self.animation_frames[self.current_frame_index]
         self.rect = self.image.get_rect(center=self.rect.center)
-
 
 player = Character(100, None, None, None, None, None)
 
@@ -122,6 +124,7 @@ snothler.image = snothler.animation_frames[0]
 snothler.current_frame_index = 0
 snothler.rect = snothler.image.get_rect()
 
+
 boulder_bro = Character(100, 30, 1, 0, 0, None)
 boulder_bro_frames = [
     pygame.transform.scale_by(pygame.image.load('images/enemies/Boulder-bro-walking-1.png'), 5),
@@ -133,13 +136,25 @@ boulder_bro.image = boulder_bro.animation_frames[0]
 boulder_bro.current_frame_index = 0
 boulder_bro.rect = boulder_bro.image.get_rect()
 
+
 little_timmy = Character(20, 5, 50, 0, 0, None)
-little_timmy_sprite = pygame.transform.scale_by(pygame.image.load('images/enemies/Little-Timmy.png'), 5)
-little_timmy.sprite = little_timmy_sprite
+little_timmy_frames = [
+    pygame.transform.scale_by(pygame.image.load('images/enemies/Little-Timmy.png'), 5)
+]
+little_timmy.animation_frames = little_timmy_frames
+little_timmy.image = little_timmy.animation_frames[0]
+little_timmy.current_frame_index = 0
+little_timmy.rect = little_timmy.image.get_rect()
+
 
 the_vulture = Character(75, 30, 20, 0, 0, None)
-the_vulture_sprite = pygame.transform.scale_by(pygame.image.load('images/enemies/The-Vulture.png'), 5)
-the_vulture.sprite = the_vulture_sprite
+the_vulture_frames = [
+    pygame.transform.scale_by(pygame.image.load('images/enemies/The-Vulture.png'), 5)
+]
+the_vulture.animation_frames = the_vulture_frames
+the_vulture.image = the_vulture.animation_frames[0]
+the_vulture.current_frame_index = 0
+the_vulture.rect = the_vulture.image.get_rect()
 
 patient_zero = Character(100, 0, 0, 0, 0, None)
 
@@ -157,23 +172,23 @@ class Wave:
 
     def enemy_spawn(self):
         current_time = pygame.time.get_ticks()
-        enemy_status = False
-
-        if current_time - self.last_spawn_time >= self.time_between * 1000:
+        if current_time - self.last_spawn_time >= self.time_between * 1000 and self.enemies_left > 0:
             edge = random.choice(['left', 'right'])
+            new_enemy = self.enemy_type.copy()
 
             if edge == 'left':
-                self.enemy_x = 0
-                pygame.transform.flip(enemy.sprite, False, True)
+                new_enemy.rect.x = 0
+                new_enemy.animation_frames = [pygame.transform.flip(f, True, False) for f in new_enemy.animation_frames]
+                new_enemy.image = new_enemy.animation_frames[0]
             else:
-                self.enemy_x = 1000
-            enemy_status = True
+                new_enemy.rect.x = 1000
 
-            if enemy_status:
-                enemy_group.add(self.enemy_type.copy())
-                enemy.rect.x = self.enemy_x
-                enemy.rect.y = self.enemy_y
+            new_enemy.rect.y = self.enemy_y
+            enemy_group.add(new_enemy)
+
+            self.enemies_left -= 1
             self.last_spawn_time = current_time
+
         
         return self.enemy_x, self.enemy_y
         
@@ -597,10 +612,6 @@ player_pointing_right = pygame.transform.scale_by(pygame.image.load('images/Play
 
 logo = pygame.transform.scale_by(pygame.image.load('images/Logo.png'), 5)
 
-
-ANIMATION = pygame.USEREVENT
-pygame.time.set_timer(ANIMATION, 750)
-
 #Game loop
 if __name__ == "__main__":
     while True:
@@ -608,10 +619,6 @@ if __name__ == "__main__":
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()        
-            
-            if event.type == ANIMATION:
-                for enemy in enemy_group:
-                    enemy.animate(walk_direction)
 
             if event.type == pygame.KEYDOWN:
                 
@@ -710,6 +717,7 @@ if __name__ == "__main__":
                         arrow_pos = 1
                 
                 if event.key == pygame.K_RETURN:
+                    current_time = pygame.time.get_ticks()
                     if start_level == "new player":
                             if arrow_pos == 1 and player_name != '':
                                 game_state = "active"
@@ -729,8 +737,10 @@ if __name__ == "__main__":
 
         wave = set_wave(wave)
         enemy = set_enemy(enemy)
-        Character.animations(walk)
-        
+        for enemy in enemy_group:
+            enemy.animate(walk_direction)
+
+
         #Keeping the selection arrow only on 
         if arrow_pos > arrow_limit:
             arrow_pos = 1
