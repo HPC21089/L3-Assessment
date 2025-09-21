@@ -55,6 +55,8 @@ enemy = 0
 walk = 0
 walk_direction = 1
 
+
+
 COMBOS = {
     'failed combo': {'name': 'Failed', 'damage': 0, 'cooldown level': 100, 'charge unit': 0},
     'combo1': {'name': 'Standard Up', 'damage': 10, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['up', 'up', 'up', 'up']},
@@ -68,7 +70,7 @@ COMBOS = {
 }
 
 class Character(pygame.sprite.Sprite):
-    def __init__(self, health, damage, speed, x=0, y=0, animation_frames=None, animation_delay=200):
+    def __init__(self, health, damage, speed, left_spawn_x, right_spawn_x, left_stop_x, right_stop_x, x=0, y=0, animation_frames=None, animation_delay=200, spawn_y=0):
         super().__init__()
         self.health = health
         self.damage = damage
@@ -82,22 +84,57 @@ class Character(pygame.sprite.Sprite):
         self.animation_delay = animation_delay 
         self.last_animation_time = pygame.time.get_ticks()
 
+        self.left_spawn_x = left_spawn_x
+        self.right_spawn_x = right_spawn_x
+        self.left_stop_x = left_stop_x
+        self.right_stop_x = right_stop_x
+        self.spawn_y = spawn_y
+
+        self.damaging = False 
+        self.damage_direction = 0 
+
     def copy(self):
         return Character(
             self.health,
             self.damage,
             self.speed,
+            self.left_spawn_x,
+            self.right_spawn_x,
+            self.left_stop_x,
+            self.right_stop_x,
             self.rect.x,
             self.rect.y,
             self.animation_frames[:],
-            self.animation_delay
+            self.animation_delay,
+            self.spawn_y
         )
-    
+
     def update(self):
-        if self.rect.x > 600:
-            self.rect.x -= self.speed
-        elif self.rect.x < 600:
-            self.rect.x += self.speed
+        if not self.damaging:
+            #General Enemy Movement
+            if self.rect.x > self.right_stop_x:
+                self.rect.x -= self.speed
+            elif self.rect.x < self.left_stop_x:
+                self.rect.x += self.speed
+
+            #Damage Player
+            if self.right_stop_x + 5 > self.rect.x < self.right_stop_x + 10 and self.rect.x > 600:
+                self.damaging = True
+                self.damage_direction = 1  
+                player.health -= enemy.damage
+            elif self.left_stop_x - 10 < self.rect.x > self.left_stop_x - 5 and self.rect.x < 600:
+                self.damaging = True
+                self.damage_direction = -1  
+                player.health -= enemy.damage
+        
+        #Reset Enemy Pos After Damaging
+        else:
+            self.rect.x += self.damage_direction * 10
+            if self.damage_direction == 1 and self.rect.x >= enemy.right_spawn_x:
+                self.damaging = False
+            elif self.damage_direction == -1 and self.rect.x <= enemy.left_spawn_x:
+                self.damaging = False
+
 
     def animate(self, direction=1):
         current_time = pygame.time.get_ticks()
@@ -107,9 +144,11 @@ class Character(pygame.sprite.Sprite):
             self.rect = self.image.get_rect(center=self.rect.center)
             self.last_animation_time = current_time
 
-player = Character(100, None, None, None, None, None)
+player = Character(100, None, None, None, None, None, None, None)
 
-snothler = Character(50, 15, 2.5, 0, 0, None, 200)
+#enemy = Character(health, damage, speed, left_spawn_x, right_spawn_x, left_stop_x, right_stop_x, 0, 0, None, anim_delay, spawn_y)
+
+snothler = Character(15, 15, 2, -255, 1455, 390, 645, 0, 0, None, 600, spawn_y=10)
 snothler_frames = [
     pygame.transform.scale_by(pygame.image.load('images/enemies/Snothler-1.png'), 5),
     pygame.transform.scale_by(pygame.image.load('images/enemies/Snothler-2.png'), 5)
@@ -119,18 +158,17 @@ snothler.image = snothler.animation_frames[0]
 snothler.current_frame_index = 0
 snothler.rect = snothler.image.get_rect()
 
-boulder_bro = Character(100, 30, 1, 0, 0, None, 500)
+boulder_bro = Character(40, 30, 1, -481, 1275, 165, 640, 0, 0, None, 700, spawn_y=50)
 boulder_bro_frames = [
     pygame.transform.scale_by(pygame.image.load('images/enemies/Boulder-bro-walking-1.png'), 5),
-    pygame.transform.scale_by(pygame.image.load('images/enemies/Boulder-Bro-Stationary.png'), 5),
-    pygame.transform.scale_by(pygame.image.load('images/enemies/Boulder-Bro-walking-2.png'), 5)
+    pygame.transform.scale_by(pygame.image.load('images/enemies/Boulder-Bro-Stationary.png'), 5)
 ]
 boulder_bro.animation_frames = boulder_bro_frames
 boulder_bro.image = boulder_bro.animation_frames[0]
 boulder_bro.current_frame_index = 0
 boulder_bro.rect = boulder_bro.image.get_rect()
 
-little_timmy = Character(20, 5, 50, 0, 0, None, 0)
+little_timmy = Character(15, 5, 20, -220, 1310, 420, 646, 0, 0, None, 0, spawn_y=300)
 little_timmy_frames = [
     pygame.transform.scale_by(pygame.image.load('images/enemies/Little-Timmy.png'), 5)
 ]
@@ -139,7 +177,7 @@ little_timmy.image = little_timmy.animation_frames[0]
 little_timmy.current_frame_index = 0
 little_timmy.rect = little_timmy.image.get_rect()
 
-the_vulture = Character(75, 30, 20, 0, 0, None, 0)
+the_vulture = Character(20, 30, 5, -655, 1200, -20, 640, 0, 0, None, 0, spawn_y=50)
 the_vulture_frames = [
     pygame.transform.scale_by(pygame.image.load('images/enemies/The-Vulture.png'), 5)
 ]
@@ -148,7 +186,7 @@ the_vulture.image = the_vulture.animation_frames[0]
 the_vulture.current_frame_index = 0
 the_vulture.rect = the_vulture.image.get_rect()
 
-patient_zero = Character(100, 0, 0, 0, 0, None)
+patient_zero = Character(100, None, None, None, None, None, None, None, None)
 
 enemy_group = pygame.sprite.Group()
 
@@ -164,28 +202,29 @@ class Wave:
 
     def enemy_spawn(self):
         current_time = pygame.time.get_ticks()
-        if current_time - self.last_spawn_time >= self.time_between * 1000 and self.enemies_left > 0:
+        if current_time - self.last_spawn_time >= self.time_between * 1000 and self.enemies_left > 0 or len(enemy_group) == 0:
             edge = random.choice(['left', 'right'])
             new_enemy = self.enemy_type.copy()
 
             if edge == 'left':
-                new_enemy.rect.x = 0
+                new_enemy.rect.x = enemy.left_spawn_x
                 new_enemy.animation_frames = [pygame.transform.flip(f, True, False) for f in new_enemy.animation_frames]
                 new_enemy.image = new_enemy.animation_frames[0]
             else:
-                new_enemy.rect.x = 1000
+                new_enemy.rect.x = enemy.right_spawn_x
 
-            new_enemy.rect.y = self.enemy_y
+            new_enemy.rect.y = self.enemy_type.spawn_y
             enemy_group.add(new_enemy)
 
             self.last_spawn_time = current_time
 
         return self.enemy_x, self.enemy_y
         
-wave1 = Wave(snothler, 10, 5)
-wave2 = Wave(boulder_bro, 5, 5)
+#num = Wave(enemy_type, enems_left, time_between)
+wave1 = Wave(snothler, 10, 7)
+wave2 = Wave(boulder_bro, 5, 12)
 wave3 = Wave(little_timmy, 15, 5)
-wave4 = Wave(the_vulture, 10, 5)
+wave4 = Wave(the_vulture, 10, 7)
 wave5 = Wave(patient_zero, 1, 5)
 
 def draw_text(text, font, color, x, y):
@@ -247,10 +286,10 @@ def load_hb_images(start=4, end=100, step=4, scale=5):
     return hb_images
 
 def hb_blit():
-    if player.health == 0:
+    if player.health <= 0:
         health_bar = hb_empty
     else:
-        clamped_player_health = min(max(4, int(player_health // 4 * 4)), 100)
+        clamped_player_health = min(max(4, int(player.health // 4 * 4)), 100)
         health_bar = hb_images.get(clamped_player_health, hb_empty)
 
     WINDOW.blit(health_bar, (1125,30))
@@ -703,7 +742,7 @@ if __name__ == "__main__":
                     if start_level == "new player":
                             if arrow_pos == 1 and player_name != '':
                                 game_state = "active"
-                                wave_num = 1
+                                wave_num = 4
                                 last_spawn_time = current_time
 
                 #Selection arrow movement
@@ -721,7 +760,6 @@ if __name__ == "__main__":
         enemy = set_enemy(enemy)
         for enemy in enemy_group:
             enemy.animate(walk_direction)
-
 
         #Keeping the selection arrow only on 
         if arrow_pos > arrow_limit:
