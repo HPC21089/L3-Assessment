@@ -30,21 +30,20 @@ font_medium = pygame.font.SysFont('freedom-font - Shortcut.lnk', 35)
 font_small = pygame.font.SysFont('freedom-font - Shortcut.lnk', 25)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-wave_num = 0
-wave = 0
+wave_num = 1
 ultimate_charge = 0
 cooldown_charge = 0
 ultimate_status = False
 cooldown = False
-player_health = 100 #ENTIRELEY TEMP VARIABLE ONLY HERE 'TIL CLASSES
-game_state = "main menu"
+game_state = "dead"
 pause_level = "base"
 start_level = "base"
+main_menu_level = "base"
 arrow_limit = 0
 arrow_pos = 1
 inputs = []
 max_inputs = 4
-player_name = 'TESTIE'
+player_name = ''
 enemy_list = []
 walk = 0
 walk_direction = 1
@@ -219,6 +218,11 @@ class Wave:
             self.last_spawn_time = current_time
 
         return self.enemy_x, self.enemy_y
+    
+    def reset():
+        player.health = 100
+        wave_num = 1
+        enemy_group.empty()
         
 #num = Wave(enemy_type, enems_left, time_between)
 wave1 = Wave(snothler, 10, 7)
@@ -226,6 +230,14 @@ wave2 = Wave(boulder_bro, 5, 12)
 wave3 = Wave(little_timmy, 15, 5)
 wave4 = Wave(the_vulture, 10, 7)
 wave5 = Wave(patient_zero, 1, 5)
+
+waves = {
+    1: wave1,
+    2: wave2,
+    3: wave3,
+    4: wave4,
+    5: wave5,
+}
 
 def draw_text(text, font, color, x, y):
     text = font.render(text, True, color)
@@ -442,21 +454,8 @@ def player_pointing():
 
     WINDOW.blit(player, (player_x, player_y))
 
-def set_wave(wave):
-    if wave_num == 1:
-        wave = wave1
-    elif wave_num == 2:
-        wave = wave2
-    elif wave_num == 3:
-        wave = wave3
-    elif wave_num == 4:
-        wave = wave4
-    elif wave_num == 5:
-        wave = wave5
-    else:
-        pass
-
-    return wave
+def set_wave(wave_num):
+    return waves.get(wave_num, None)
 
 def set_enemy(enemy):
     if wave_num == 1:
@@ -477,9 +476,7 @@ def gray_overlay():
     overlay.fill((128, 128, 128, 150))
     WINDOW.blit(overlay, (0, 0))
 
-def ui_blit(key_pressed, wave):
-    """Displays all parts of the base game UI"""
-    # -----Display text-----
+def ui_info_text():
     #Wave number
     if wave_num <= 9:
         draw_text("Wave: " + str(wave_num), font_medium, WHITE, 596, 10)
@@ -492,6 +489,14 @@ def ui_blit(key_pressed, wave):
     elif wave.enemies_left <= 9:
         draw_text("Enemies Left: " + str(wave.enemies_left), font_medium, WHITE, 545, 687) #CHANGE X POS FOR SPACING, single digit
 
+    #Gauge titles
+    draw_text("Ultimate Charge", font_small, WHITE, 142.5, 575)
+    draw_text("Cooldown", font_small, WHITE, 1027.5, 575)
+
+def ui_blit(key_pressed, wave):
+    """Displays all parts of the base game UI"""
+    # -----Display text-----
+    
     draw_text(player_name, font_small, WHITE, 1135, 15)
 
     #Esc to pause
@@ -503,10 +508,6 @@ def ui_blit(key_pressed, wave):
     ultimate_blit()
     cooldown_blit()
 
-    #Gauge titles
-    draw_text("Ultimate Charge", font_small, WHITE, 142.5, 575)
-    draw_text("Cooldown", font_small, WHITE, 1027.5, 575)
-
     #-----Arrows-----
     arrows_functionality()
     inputs_display()
@@ -516,33 +517,42 @@ def ui_blit(key_pressed, wave):
         
     player_pointing()
 
+    ui_info_text()
+
+def paused_ui():
+    WINDOW.blit(player_default, (1145, 70))
+    hb_blit()
+    draw_text(player_name, font_small, WHITE, 1135, 15)
+
+    ultimate_blit()
+    cooldown_blit()
+
+    left_arrow = left_arrow_base
+    up_arrow = up_arrow_base
+    down_arrow = down_arrow_base
+    right_arrow = right_arrow_base
+    WINDOW.blit(left_arrow, (420,560))
+    WINDOW.blit(up_arrow, (540,560))
+    WINDOW.blit(down_arrow, (660,560))
+    WINDOW.blit(right_arrow, (780,560))
+
+    ui_info_text()
+
 def pause_screen(arrow_limit):
+    paused_ui()
     #Gray overlay
     gray_overlay()
 
-    #Esc to play
-    WINDOW.blit(esc_bg, (25, 25))
-    draw_text("esc", font_small, BLACK, 31, 35)
-    draw_text("to play", font_small, WHITE, 70, 35)
-    draw_text("Z to confirm", font_small, WHITE, 31, 75)
+    #Selection Text
+    draw_text("CONTINUE", font_big, WHITE, 562.5, 135)
+    draw_text("BACK TO MAIN MENU", font_big, WHITE, 577.5, 265)
 
-    if pause_level == "base":
-        #Selection Text
-        draw_text("ENEMIES", font_big, WHITE, 562.5, 135)
-        draw_text("MOVES", font_big, WHITE, 577.5, 265)
-        draw_text("ACHIEVEMENTS", font_big, WHITE, 502.5, 400)
-        draw_text("QUIT", font_big, WHITE, 597.5, 535)
-
-        arrow_limit = 4
-        
-        if arrow_pos == 1:
-            WINDOW.blit(selection_arrow, (480, 125))
-        elif arrow_pos == 2:
-            WINDOW.blit(selection_arrow, (495, 255))
-        elif arrow_pos == 3:
-            WINDOW.blit(selection_arrow, (420, 390))
-        elif arrow_pos == 4:
-            WINDOW.blit(selection_arrow, (515, 525))
+    arrow_limit = 2
+    
+    if arrow_pos == 1:
+        WINDOW.blit(selection_arrow, (480, 125))
+    elif arrow_pos == 2:
+        WINDOW.blit(selection_arrow, (495, 255))
 
     return arrow_limit
 
@@ -613,30 +623,29 @@ def main_menu(arrow_limit):
     WINDOW.blit(player_default, (19, 65))
     draw_text(player_name, font_medium, WHITE, 150, 18)
 
+    if main_menu_level == "base":
+        draw_text("NEW RUN", font_big, WHITE, 560, 150)
+        draw_text("ENEMIES", font_big, WHITE, 565.5, 225)
+        draw_text("MOVES", font_big, WHITE, 578.5, 300)
+        draw_text("ACHIEVEMENTS", font_big, WHITE, 502.5, 375)
+        draw_text("SAVE & QUIT", font_big, WHITE, 530, 450)
 
-    draw_text("NEW RUN", font_big, WHITE, 560, 150)
-    draw_text("ENEMIES", font_big, WHITE, 565.5, 225)
-    draw_text("MOVES", font_big, WHITE, 578.5, 300)
-    draw_text("ACHIEVEMENTS", font_big, WHITE, 500.5, 375)
-    draw_text("SAVE & QUIT", font_big, WHITE, 530, 450)
+        draw_text(f"Total Runs: {total_runs}", font_big, WHITE, 532, 600)
+        draw_text(f"Runs Completed: {runs_completed}", font_big, WHITE, 483, 640)
+        draw_text(f"Enemies Defeated: {enemies_defeated}", font_big, WHITE, 472, 680)
 
-    
-    draw_text(f"Total Runs: {total_runs}", font_big, WHITE, 532, 600)
-    draw_text(f"Runs Completed: {runs_completed}", font_big, WHITE, 483, 640)
-    draw_text(f"Enemies Defeated: {enemies_defeated}", font_big, WHITE, 472, 680)
+        arrow_limit = 5
 
-    arrow_limit = 5
-
-    if arrow_pos == 1:
-        WINDOW.blit(selection_arrow, (477.5, 140))
-    elif arrow_pos == 2:
-        WINDOW.blit(selection_arrow, (483, 215))
-    elif arrow_pos == 3:
-        WINDOW.blit(selection_arrow, (496, 290))
-    elif arrow_pos == 4:
-        WINDOW.blit(selection_arrow, (418, 365))
-    elif arrow_pos == 5:
-        WINDOW.blit(selection_arrow, (447.5, 440))
+        if arrow_pos == 1:
+            WINDOW.blit(selection_arrow, (477.5, 140))
+        elif arrow_pos == 2:
+            WINDOW.blit(selection_arrow, (483, 215))
+        elif arrow_pos == 3:
+            WINDOW.blit(selection_arrow, (496, 290))
+        elif arrow_pos == 4:
+            WINDOW.blit(selection_arrow, (420, 365))
+        elif arrow_pos == 5:
+            WINDOW.blit(selection_arrow, (447.5, 440))
 
     return arrow_limit
 
@@ -712,7 +721,6 @@ if __name__ == "__main__":
                 
                 if game_state == "active":
                     if not cooldown:
-                        
                         #Combo input tracking
                         if event.key == pygame.K_LEFT:
                             inputs.append('left')
@@ -750,7 +758,6 @@ if __name__ == "__main__":
                     inputs.pop(0)
 
             if event.type == pygame.KEYUP:
-                
                 #Switching between all screens
                 if event.key == pygame.K_z:
                     if game_state == "start":
@@ -762,31 +769,36 @@ if __name__ == "__main__":
                         if start_level == "new player":
                             if arrow_pos == 2:
                                 start_level = "base"   
-                    if game_state == "paused":
-                        if pause_level == "base":
-                            if arrow_pos == 1:
-                                pause_state = "enemies"
-                            if arrow_pos == 2:
-                                pause_state = "moves"
-                            if arrow_pos == 3:
-                                pause_state = "achievements"
-                            if arrow_pos == 4:
-                                game_state = "start"
-                                start_level = "base"
-                                arrow_pos = 1
-                    if game_state == "dead":
+                    elif game_state == "paused":
                         if arrow_pos == 1:
                             game_state = "active"
-                            wave_num = 1
                         if arrow_pos == 2:
                             game_state = "main menu"
+                            Wave.reset()
+                    elif game_state == "dead":
+                        if arrow_pos == 1:
+                            game_state = "active"
+                            Wave.reset()
+                        if arrow_pos == 2:
+                            game_state = "main menu"
+                            Wave.reset()
                         arrow_pos = 1
+                    elif game_state == "main menu":
+                        current_time = pygame.time.get_ticks()
+                        if main_menu_level == "base":
+                            if arrow_pos == 1:
+                                game_state = "active"
+                                wave_num = 1
+                                last_spawn_time = current_time
+                                total_runs += 1
+
+
                 
                 if event.key == pygame.K_x:
                     if game_state == "start":
                         if start_level == "new player" and arrow_pos == 2 or start_level == "returning":
                             start_level = "base"
-                    if game_state == "paused":
+                    elif game_state == "paused":
                         if pause_level == "enemies" or pause_level == "moves" or pause_level == "achievements":
                             pause_level = "base"
                 
@@ -801,12 +813,9 @@ if __name__ == "__main__":
                         arrow_pos = 1
                 
                 if event.key == pygame.K_RETURN:
-                    current_time = pygame.time.get_ticks()
                     if start_level == "new player":
                             if arrow_pos == 1 and player_name != '':
                                 game_state = "main menu"
-                                wave_num = 1                        #FIX THIS!!!!!!!
-                                last_spawn_time = current_time
 
                 #Selection arrow movement
                 if game_state != "active":
@@ -819,7 +828,9 @@ if __name__ == "__main__":
 
         WINDOW.blit(background, (0,0))
 
-        wave = set_wave(wave)
+        print(game_state)
+
+        wave = set_wave(wave_num)
         enemy = set_enemy(enemy)
         for enemy in enemy_group:
             enemy.animate(walk_direction)
