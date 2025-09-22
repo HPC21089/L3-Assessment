@@ -35,7 +35,7 @@ ultimate_charge = 0
 cooldown_charge = 0
 ultimate_status = False
 cooldown = False
-game_state = "dead"
+game_state = "start"
 pause_level = "base"
 start_level = "base"
 main_menu_level = "base"
@@ -544,15 +544,15 @@ def pause_screen(arrow_limit):
     gray_overlay()
 
     #Selection Text
-    draw_text("CONTINUE", font_big, WHITE, 562.5, 135)
-    draw_text("BACK TO MAIN MENU", font_big, WHITE, 577.5, 265)
+    draw_text("CONTINUE", font_big, WHITE, 547.5, 250)
+    draw_text("BACK TO MAIN MENU", font_big, WHITE, 460, 400)
 
     arrow_limit = 2
     
     if arrow_pos == 1:
-        WINDOW.blit(selection_arrow, (480, 125))
+        WINDOW.blit(selection_arrow, (465, 240))
     elif arrow_pos == 2:
-        WINDOW.blit(selection_arrow, (495, 255))
+        WINDOW.blit(selection_arrow, (377.5, 390))
 
     return arrow_limit
 
@@ -790,17 +790,13 @@ if __name__ == "__main__":
                                 game_state = "active"
                                 wave_num = 1
                                 last_spawn_time = current_time
-                                total_runs += 1
 
-
-                
                 if event.key == pygame.K_x:
                     if game_state == "start":
                         if start_level == "new player" and arrow_pos == 2 or start_level == "returning":
                             start_level = "base"
                     elif game_state == "paused":
-                        if pause_level == "enemies" or pause_level == "moves" or pause_level == "achievements":
-                            pause_level = "base"
+                        game_state = "active"
                 
                 if event.key == pygame.K_ESCAPE:
                     if game_state == "active":
@@ -827,8 +823,6 @@ if __name__ == "__main__":
         key_pressed = pygame.key.get_pressed()
 
         WINDOW.blit(background, (0,0))
-
-        print(game_state)
 
         wave = set_wave(wave_num)
         enemy = set_enemy(enemy)
