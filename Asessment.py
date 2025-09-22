@@ -8,8 +8,7 @@ Date: 03/06/2024
 # ---------------------------------- IMPORTS ----------------------------------
 
 
-import pygame, json, random, copy
-from copy import deepcopy
+import pygame, json, random
 
 
 # ---------------------------------- INITIIALIZING ----------------------------------
@@ -38,14 +37,14 @@ cooldown_charge = 0
 ultimate_status = False
 cooldown = False
 player_health = 100 #ENTIRELEY TEMP VARIABLE ONLY HERE 'TIL CLASSES
-game_state = "start"
+game_state = "main menu"
 pause_level = "base"
 start_level = "base"
 arrow_limit = 0
 arrow_pos = 1
 inputs = []
 max_inputs = 4
-player_name = ''
+player_name = 'TESTIE'
 enemy_list = []
 walk = 0
 walk_direction = 1
@@ -54,8 +53,9 @@ animation_delay = 150
 enemy = 0
 walk = 0
 walk_direction = 1
-
-
+runs_completed = 0
+total_runs = 0
+enemies_defeated = 0
 
 COMBOS = {
     'failed combo': {'name': 'Failed', 'damage': 0, 'cooldown level': 100, 'charge unit': 0},
@@ -472,6 +472,11 @@ def set_enemy(enemy):
     
     return enemy
 
+def gray_overlay():
+    overlay = pygame.Surface((1280, 720), pygame.SRCALPHA)  
+    overlay.fill((128, 128, 128, 150))
+    WINDOW.blit(overlay, (0, 0))
+
 def ui_blit(key_pressed, wave):
     """Displays all parts of the base game UI"""
     # -----Display text-----
@@ -513,9 +518,7 @@ def ui_blit(key_pressed, wave):
 
 def pause_screen(arrow_limit):
     #Gray overlay
-    overlay = pygame.Surface((1280, 720), pygame.SRCALPHA)  
-    overlay.fill((128, 128, 128, 150))
-    WINDOW.blit(overlay, (0, 0))
+    gray_overlay()
 
     #Esc to play
     WINDOW.blit(esc_bg, (25, 25))
@@ -545,9 +548,7 @@ def pause_screen(arrow_limit):
 
 def start_screen(arrow_limit):
     #Gray overlay
-    overlay = pygame.Surface((1280, 720), pygame.SRCALPHA)  
-    overlay.fill((128, 128, 128, 150))
-    WINDOW.blit(overlay, (0, 0))
+    gray_overlay()
 
     #Logo
     WINDOW.blit(logo, (280, 100))
@@ -585,6 +586,59 @@ def start_screen(arrow_limit):
 
     return arrow_limit
 
+def death_screen(arrow_limit):
+    #Gray overlay
+    gray_overlay()
+
+    #Game Over Display
+    WINDOW.blit(game_over, (410, 150))
+
+    draw_text("NEW RUN", font_big, WHITE, 557.5, 475)
+    draw_text("MAIN MENU", font_big, WHITE, 540.5, 575)
+
+    arrow_limit = 2
+    
+    if arrow_pos == 1:
+        WINDOW.blit(selection_arrow, (475, 465))
+    elif arrow_pos == 2:
+        WINDOW.blit(selection_arrow, (452, 565))
+
+    return arrow_limit
+
+def main_menu(arrow_limit):
+    #Gray overlay
+    gray_overlay()
+
+    WINDOW.blit(small_logo, (0,0))
+    WINDOW.blit(player_default, (19, 65))
+    draw_text(player_name, font_medium, WHITE, 150, 18)
+
+
+    draw_text("NEW RUN", font_big, WHITE, 560, 150)
+    draw_text("ENEMIES", font_big, WHITE, 565.5, 225)
+    draw_text("MOVES", font_big, WHITE, 578.5, 300)
+    draw_text("ACHIEVEMENTS", font_big, WHITE, 500.5, 375)
+    draw_text("SAVE & QUIT", font_big, WHITE, 530, 450)
+
+    
+    draw_text(f"Total Runs: {total_runs}", font_big, WHITE, 532, 600)
+    draw_text(f"Runs Completed: {runs_completed}", font_big, WHITE, 483, 640)
+    draw_text(f"Enemies Defeated: {enemies_defeated}", font_big, WHITE, 472, 680)
+
+    arrow_limit = 5
+
+    if arrow_pos == 1:
+        WINDOW.blit(selection_arrow, (477.5, 140))
+    elif arrow_pos == 2:
+        WINDOW.blit(selection_arrow, (483, 215))
+    elif arrow_pos == 3:
+        WINDOW.blit(selection_arrow, (496, 290))
+    elif arrow_pos == 4:
+        WINDOW.blit(selection_arrow, (418, 365))
+    elif arrow_pos == 5:
+        WINDOW.blit(selection_arrow, (447.5, 440))
+
+    return arrow_limit
 
 # ---------------------------------- SPRITES ----------------------------------
 
@@ -632,6 +686,8 @@ player_pointing_left = pygame.transform.scale_by(pygame.image.load('images/Playe
 player_pointing_right = pygame.transform.scale_by(pygame.image.load('images/Player/Pointing/Player-Pointing-Right.png'), 5)
 
 logo = pygame.transform.scale_by(pygame.image.load('images/Logo.png'), 5)
+small_logo = pygame.image.load('images/Logo.png')
+game_over = pygame.transform.scale_by(pygame.image.load('images/Death Screen.png'), 5)
 
 #Game loop
 if __name__ == "__main__":
@@ -718,6 +774,13 @@ if __name__ == "__main__":
                                 game_state = "start"
                                 start_level = "base"
                                 arrow_pos = 1
+                    if game_state == "dead":
+                        if arrow_pos == 1:
+                            game_state = "active"
+                            wave_num = 1
+                        if arrow_pos == 2:
+                            game_state = "main menu"
+                        arrow_pos = 1
                 
                 if event.key == pygame.K_x:
                     if game_state == "start":
@@ -741,12 +804,12 @@ if __name__ == "__main__":
                     current_time = pygame.time.get_ticks()
                     if start_level == "new player":
                             if arrow_pos == 1 and player_name != '':
-                                game_state = "active"
-                                wave_num = 4
+                                game_state = "main menu"
+                                wave_num = 1                        #FIX THIS!!!!!!!
                                 last_spawn_time = current_time
 
                 #Selection arrow movement
-                if game_state == "paused" or game_state == "start":
+                if game_state != "active":
                     if event.key == pygame.K_DOWN:
                         arrow_pos += 1
                     elif event.key == pygame.K_UP:
@@ -787,10 +850,20 @@ if __name__ == "__main__":
         
             #Blit game ui 
             ui_blit(key_pressed, wave)
+
+            if player.health <= 0:
+                game_state = "dead"
+                total_runs += 1
             
         elif game_state == "paused":
             #Blit pause screen
             arrow_limit = pause_screen(arrow_limit)
+
+        elif game_state == "dead":
+            arrow_limit = death_screen(arrow_limit)
+
+        elif game_state == "main menu":
+            arrow_limit = main_menu(arrow_limit)
         
         CLOCK.tick(FRAME_RATE)
         pygame.display.update()
