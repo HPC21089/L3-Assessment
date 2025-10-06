@@ -8,7 +8,7 @@ Date: 03/06/2024
 # ---------------------------------- IMPORTS ----------------------------------
 
 
-import pygame, json, random
+import pygame, json, random, time
 
 
 # ---------------------------------- INITIIALIZING ----------------------------------
@@ -25,6 +25,7 @@ pygame.font.init()
 
 
 FRAME_RATE = 60
+font_way_too_big = pygame.font.SysFont('freedom-font - Shortcut.lnk', 100)
 font_big = pygame.font.SysFont('freedom-font - Shortcut.lnk', 50)
 font_medium = pygame.font.SysFont('freedom-font - Shortcut.lnk', 35)
 font_small = pygame.font.SysFont('freedom-font - Shortcut.lnk', 25)
@@ -55,6 +56,7 @@ walk_direction = 1
 runs_completed = 0
 total_runs = 0
 enemies_defeated = 0
+countdown = 6
 
 COMBOS = {
     'failed combo': {'name': 'Failed', 'damage': 0, 'cooldown level': 100, 'charge unit': 0},
@@ -197,7 +199,6 @@ class Wave:
         self.last_spawn_time = 0
         self.enemy_x = 0
         self.enemy_y = 0
-        self.enemy_list = []
 
     def enemy_spawn(self):
         current_time = pygame.time.get_ticks()
@@ -218,14 +219,16 @@ class Wave:
             self.last_spawn_time = current_time
 
         return self.enemy_x, self.enemy_y
-    
+
     def reset():
         player.health = 100
         wave_num = 1
         enemy_group.empty()
+        ultimate_charge = 0
+        cooldown = 0
         
 #num = Wave(enemy_type, enems_left, time_between)
-wave1 = Wave(snothler, 10, 7)
+wave1 = Wave(snothler, 7, 7)
 wave2 = Wave(boulder_bro, 5, 12)
 wave3 = Wave(little_timmy, 15, 5)
 wave4 = Wave(the_vulture, 10, 7)
@@ -471,6 +474,10 @@ def set_enemy(enemy):
     
     return enemy
 
+
+#GAME STATES
+
+
 def gray_overlay():
     overlay = pygame.Surface((1280, 720), pygame.SRCALPHA)  
     overlay.fill((128, 128, 128, 150))
@@ -649,8 +656,23 @@ def main_menu(arrow_limit):
 
     return arrow_limit
 
-# ---------------------------------- SPRITES ----------------------------------
+def inbetween(game_state, countdown, last_update_time):
+    gray_overlay()
+    draw_text(f"Wave: {str(wave_num)}", font_way_too_big, WHITE, 500, 200)
+    draw_text(f"{str(countdown)}", font_way_too_big, WHITE, 700, 300)
 
+    current_time = time.time()
+    if current_time - last_update_time >= 1 and countdown > 0:
+        countdown -= 1
+        last_update_time = current_time
+
+    if countdown == 0:
+        game_state = 'active'
+
+    return game_state, countdown, last_update_time
+
+
+# ---------------------------------- SPRITES ----------------------------------
 
 #Placeholder image
 blank = pygame.transform.scale_by(pygame.image.load('images/Blank.png'), 5)
@@ -748,7 +770,17 @@ if __name__ == "__main__":
                                     ultimate_charge += COMBOS[output_combo]['charge unit']
                                     cooldown = True
                                     cooldown_charge = 100
-                        
+                                    
+                                    if len(enemy_group) > 0:
+                                        oldest = enemy_group.sprites()[0]
+                                        oldest.health -= COMBOS[output_combo]['damage']
+                                        if oldest.health <= 0:
+                                            oldest.kill()
+                                            enemies_defeated += 1        
+                                            wave.enemies_left -= 1
+                                    else:
+                                        pass
+
                         #Clearing combo list
                         if event.key == pygame.K_x:
                             inputs = []
@@ -809,9 +841,10 @@ if __name__ == "__main__":
                         arrow_pos = 1
                 
                 if event.key == pygame.K_RETURN:
-                    if start_level == "new player":
-                            if arrow_pos == 1 and player_name != '':
-                                game_state = "main menu"
+                    if game_state == 'start':
+                        if start_level == "new player":
+                                if arrow_pos == 1 and player_name != '':
+                                    game_state = "main menu"
 
                 #Selection arrow movement
                 if game_state != "active":
@@ -860,6 +893,14 @@ if __name__ == "__main__":
                 game_state = "dead"
                 total_runs += 1
             
+            if wave.enemies_left == 0:
+                wave_num += 1
+                player.health = 100
+                enemy_group.empty()
+                ultimate_charge = 0
+                cooldown = 0
+                game_state = 'inbetween'
+            
         elif game_state == "paused":
             #Blit pause screen
             arrow_limit = pause_screen(arrow_limit)
@@ -869,6 +910,9 @@ if __name__ == "__main__":
 
         elif game_state == "main menu":
             arrow_limit = main_menu(arrow_limit)
+
+        elif game_state == 'inbetween':
+            game_state, countdown, last_update_time = inbetween(game_state, countdown, last_update_time)
         
         CLOCK.tick(FRAME_RATE)
         pygame.display.update()
