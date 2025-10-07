@@ -66,6 +66,7 @@ COMBOS = {
     'combo4': {'name': 'Standard Right', 'damage': 10, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['right', 'right', 'right', 'right']},
     'combo5': {'name': 'Floss', 'damage': 15, 'cooldown level': 3.5, 'charge unit': 15, 'input combo': ['left', 'right', 'left', 'right']},
     'combo6': {'name': 'The Hype', 'damage': 15, 'cooldown level': 3.5, 'charge unit': 15, 'input combo': ['up', 'up', 'down', 'down']},
+    'combo7': {'name': 'Flippin Sexy', 'damage': 20, 'cooldown level': 3, 'charge unit': 20, 'input combo': ['down', 'down', 'left', 'right']},
 
     'ultimate combo': {'name': 'Ultimate Combo', 'damage': 1000000000, 'cooldown level': 1000000000, 'charge unit': 0, 'input combo': ['up', 'left', 'down', 'right']}
 }
@@ -135,7 +136,6 @@ class Character(pygame.sprite.Sprite):
                 self.damaging = False
             elif self.damage_direction == -1 and self.rect.x <= enemy.left_spawn_x:
                 self.damaging = False
-
 
     def animate(self, direction=1):
         current_time = pygame.time.get_ticks()
@@ -420,6 +420,8 @@ def check_combo():
         output_combo = 'combo5'
     elif inputs == COMBOS['combo6']['input combo']:
         output_combo = 'combo6'
+    elif inputs == COMBOS['combo7']['input combo']:
+        output_combo = 'combo7'
     elif inputs == COMBOS['ultimate combo']['input combo']:
             output_combo = 'ultimate combo'
     else: 
@@ -527,12 +529,13 @@ def ui_blit(key_pressed, wave):
     ui_info_text()
 
 def paused_ui():
-    WINDOW.blit(player_default, (1145, 70))
     hb_blit()
     draw_text(player_name, font_small, WHITE, 1135, 15)
 
     ultimate_blit()
     cooldown_blit()
+
+    enemy_group.draw(WINDOW)
 
     left_arrow = left_arrow_base
     up_arrow = up_arrow_base
@@ -735,7 +738,7 @@ if __name__ == "__main__":
                         if arrow_pos == 1:
                             if event.key == pygame.K_BACKSPACE:
                                 player_name = player_name[:-1]
-                            elif event.key == pygame.K_RETURN:
+                            elif event.key == pygame.K_RETURN or event.key == pygame.K_ESCAPE or event.key == pygame.K_TAB:
                                 pass
                             else:
                                 if len(player_name) < 6:
@@ -771,15 +774,15 @@ if __name__ == "__main__":
                                     cooldown = True
                                     cooldown_charge = 100
                                     
-                                    if len(enemy_group) > 0:
-                                        oldest = enemy_group.sprites()[0]
-                                        oldest.health -= COMBOS[output_combo]['damage']
-                                        if oldest.health <= 0:
-                                            oldest.kill()
-                                            enemies_defeated += 1        
-                                            wave.enemies_left -= 1
-                                    else:
-                                        pass
+                            if len(enemy_group) > 0:
+                                oldest = enemy_group.sprites()[0]
+                                oldest.health -= COMBOS[output_combo]['damage']
+                                if oldest.health <= 0:
+                                    oldest.kill()
+                                    enemies_defeated += 1        
+                                    wave.enemies_left -= 1
+                            else:
+                                pass
 
                         #Clearing combo list
                         if event.key == pygame.K_x:
@@ -820,8 +823,11 @@ if __name__ == "__main__":
                         if main_menu_level == "base":
                             if arrow_pos == 1:
                                 game_state = "active"
-                                wave_num = 1
+                                wave_num = 4
                                 last_spawn_time = current_time
+                            if arrow_pos == 5:
+                                pygame.quit()
+                                exit()  
 
                 if event.key == pygame.K_x:
                     if game_state == "start":
@@ -893,13 +899,15 @@ if __name__ == "__main__":
                 game_state = "dead"
                 total_runs += 1
             
-            if wave.enemies_left == 0:
+            if wave.enemies_left == 0 and wave_num < 4:
                 wave_num += 1
                 player.health = 100
                 enemy_group.empty()
                 ultimate_charge = 0
-                cooldown = 0
+                cooldown = 5
                 game_state = 'inbetween'
+            elif wave.enemies_left == 0 and wave_num == 4:
+                game_state = 'win'
             
         elif game_state == "paused":
             #Blit pause screen
@@ -913,6 +921,9 @@ if __name__ == "__main__":
 
         elif game_state == 'inbetween':
             game_state, countdown, last_update_time = inbetween(game_state, countdown, last_update_time)
+
+        elif game_state == 'win':
+            pass
         
         CLOCK.tick(FRAME_RATE)
         pygame.display.update()
