@@ -5,13 +5,15 @@ School: Hauraki Plains College
 Date: 03/06/2024
 """
 
-# ---------------------------------- IMPORTS ----------------------------------
+# ---------- IMPORTS ----------
 
 
-import pygame, json, random, time
+import pygame
+import random
+import time
 
 
-# ---------------------------------- INITIIALIZING ----------------------------------
+# ---------- INITIIALIZING ----------
 
 
 pygame.init()
@@ -21,7 +23,7 @@ CLOCK = pygame.time.Clock()
 pygame.font.init()
 
 
-# ---------------------------------- VARIABLES ----------------------------------
+# ---------- VARIABLES ----------
 
 
 FRAME_RATE = 60
@@ -36,7 +38,7 @@ ultimate_charge = 0
 cooldown_charge = 0
 ultimate_status = False
 cooldown = False
-game_state = "start"
+game_state = "active"
 pause_level = "base"
 start_level = "base"
 main_menu_level = "base"
@@ -53,26 +55,71 @@ animation_delay = 150
 enemy = 0
 walk = 0
 walk_direction = 1
+countdown = 6
+just_reset = False
+
 runs_completed = 0
 total_runs = 0
 enemies_defeated = 0
-countdown = 6
 
 COMBOS = {
-    'failed combo': {'name': 'Failed', 'damage': 0, 'cooldown level': 100, 'charge unit': 0},
-    'combo1': {'name': 'Standard Up', 'damage': 10, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['up', 'up', 'up', 'up']},
-    'combo2': {'name': 'Standard Down', 'damage' : 10, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['down', 'down', 'down', 'down']},
-    'combo3': {'name': 'Standard Left', 'damage': 10, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['left', 'left', 'left', 'left']},
-    'combo4': {'name': 'Standard Right', 'damage': 10, 'cooldown level': 5, 'charge unit': 10, 'input combo': ['right', 'right', 'right', 'right']},
-    'combo5': {'name': 'Floss', 'damage': 15, 'cooldown level': 3.5, 'charge unit': 15, 'input combo': ['left', 'right', 'left', 'right']},
-    'combo6': {'name': 'The Hype', 'damage': 15, 'cooldown level': 3.5, 'charge unit': 15, 'input combo': ['up', 'up', 'down', 'down']},
-    'combo7': {'name': 'Flippin Sexy', 'damage': 20, 'cooldown level': 3, 'charge unit': 20, 'input combo': ['down', 'down', 'left', 'right']},
+    'failed combo': {'name': 'Failed',
+                    'damage': 0,
+                    'cooldown level': 100,
+                    'charge unit': 0},
+    'combo1': {'name':
+               'Standard Up',
+               'damage': 10,
+               'cooldown level': 5,
+               'charge unit': 10,
+               'input combo': ['up', 'up', 'up', 'up']},
+    'combo2': {'name':
+               'Standard Down',
+               'damage': 10,
+               'cooldown level': 5,
+               'charge unit': 10,
+               'input combo': ['down', 'down', 'down', 'down']},
+    'combo3': {'name': 'Standard Left',
+               'damage': 10,
+               'cooldown level': 5,
+               'charge unit': 10,
+               'input combo': ['left', 'left', 'left', 'left']},
+    'combo4': {'name':'Standard Right',
+               'damage': 10,
+               'cooldown level': 5,
+               'charge unit': 10,
+               'input combo': ['right', 'right', 'right', 'right']},
+    'combo5': {'name': 'Floss',
+               'damage': 15,
+               'cooldown level': 3.5,
+               'charge unit': 15,
+               'input combo': ['left', 'right', 'left', 'right']},
+    'combo6': {'name': 'The Hype',
+               'damage': 15,
+               'cooldown level': 3.5,
+               'charge unit': 15,
+               'input combo': ['up', 'up', 'down', 'down']},
+    'combo7': {'name': 'Flippin Sexy',
+               'damage': 20,
+               'cooldown level': 3,
+               'charge unit': 20,
+               'input combo': ['down', 'down', 'left', 'right']},
 
-    'ultimate combo': {'name': 'Ultimate Combo', 'damage': 1000000000, 'cooldown level': 1000000000, 'charge unit': 0, 'input combo': ['up', 'left', 'down', 'right']}
+    'ultimate combo': {'name': 'Ultimate Combo',
+                       'damage': 1000000000,
+                       'cooldown level': 1000000000,
+                       'charge unit': 0,
+                       'input combo': ['up', 'left', 'down', 'right']}
 }
 
 class Character(pygame.sprite.Sprite):
-    def __init__(self, health, damage, speed, left_spawn_x, right_spawn_x, left_stop_x, right_stop_x, x=0, y=0, animation_frames=None, animation_delay=200, spawn_y=0):
+    """Handles character traits and enemy spawnging, moving, and animation"""
+
+
+    def __init__(
+            self, health, damage, speed, left_spawn_x, right_spawn_x, left_stop_x, right_stop_x, 
+            x=0, y=0, animation_frames=None, animation_delay=200, spawn_y=0):
+        """Sets all traits for characters and what needs to be set for each enemy"""
         super().__init__()
         self.health = health
         self.damage = damage
@@ -80,10 +127,13 @@ class Character(pygame.sprite.Sprite):
         self.animation_frames = animation_frames or []
         self.current_frame_index = 0
 
-        self.image = self.animation_frames[0] if self.animation_frames else pygame.Surface((1, 1), pygame.SRCALPHA)
+        if self.animation_frames:
+            self.image = self.animation_frames[0]
+        else:
+            self.image = pygame.Surface((1, 1), pygame.SRCALPHA)
         self.rect = self.image.get_rect(topleft=(x or 0, y or 0))
 
-        self.animation_delay = animation_delay 
+        self.animation_delay = animation_delay
         self.last_animation_time = pygame.time.get_ticks()
 
         self.left_spawn_x = left_spawn_x
@@ -92,10 +142,11 @@ class Character(pygame.sprite.Sprite):
         self.right_stop_x = right_stop_x
         self.spawn_y = spawn_y
 
-        self.damaging = False 
-        self.damage_direction = 0 
+        self.damaging = False
+        self.damage_direction = 0
 
     def copy(self):
+        """Every peramter that needs to be copied over to every individual enemy"""
         return Character(
             self.health,
             self.damage,
@@ -138,8 +189,8 @@ class Character(pygame.sprite.Sprite):
                 self.damaging = False
 
     def animate(self, direction=1):
-        current_time = pygame.time.get_ticks()
-        if current_time - self.last_animation_time >= self.animation_delay and self.animation_frames:
+        current_time = pygame.time.get_ticks() #Takes the current time
+        if current_time - self.last_animation_time >= self.animation_delay and self.animation_frames: #Checks to see if it's time to change the frame
             self.current_frame_index = (self.current_frame_index + direction) % len(self.animation_frames)
             self.image = self.animation_frames[self.current_frame_index]
             self.rect = self.image.get_rect(center=self.rect.center)
@@ -192,10 +243,11 @@ patient_zero = Character(100, None, None, None, None, None, None, None, None)
 enemy_group = pygame.sprite.Group()
 
 class Wave:
-    def __init__(self, enemy_type, enemies_left, time_between):
+    def __init__(self, enemy_type, enemies_left, time_between, enemy_count):
         self.enemy_type = enemy_type
         self.enemies_left = enemies_left
         self.time_between = time_between
+        self.enemy_count = enemy_count
         self.last_spawn_time = 0
         self.enemy_x = 0
         self.enemy_y = 0
@@ -219,20 +271,82 @@ class Wave:
             self.last_spawn_time = current_time
 
         return self.enemy_x, self.enemy_y
-
-    def reset():
-        player.health = 100
-        wave_num = 1
-        enemy_group.empty()
-        ultimate_charge = 0
-        cooldown = 0
         
-#num = Wave(enemy_type, enems_left, time_between)
-wave1 = Wave(snothler, 7, 7)
-wave2 = Wave(boulder_bro, 5, 12)
-wave3 = Wave(little_timmy, 15, 5)
-wave4 = Wave(the_vulture, 10, 7)
-wave5 = Wave(patient_zero, 1, 5)
+#num = Wave(enemy_type, enems_left, time_between, enemy_count)
+wave1 = Wave(snothler, 7, 7, 7)
+wave2 = Wave(boulder_bro, 5, 12, 5)
+wave3 = Wave(little_timmy, 15, 5, 15)
+wave4 = Wave(the_vulture, 10, 7, 10)
+wave5 = Wave(patient_zero, 1, 5, 1)
+
+
+class Achievements():
+    def __init__(self):
+        self.complete_one_run = False
+        self.complete_five_runs = False
+        self.complete_ten_runs = False
+        self.defeat_ten_enemies = False
+        self.defeat_twenty_five_enemies = False
+        self.defeat_fifty_enemies = False
+        self.complete_wave_one = False
+        self.complete_wave_two = False
+        self.complete_wave_three = False
+
+        self.run_achievements = 0
+
+        self.ach_ban_x = -520
+
+    def check(self, runs_completed, enemies_defeated, wave_num):
+        if runs_completed >= 1 and not self.complete_one_run:
+            self.complete_one_run = True
+            self.run_achievements += 1
+        if runs_completed >= 5 and not self.complete_five_runs:
+            self.complete_five_runs = True
+            self.run_achievements += 1
+        if runs_completed >= 10 and not self.complete_ten_runs:
+            self.complete_ten_runs = True
+            self.run_achievements += 1
+
+        # Enemy achievements
+        if enemies_defeated >= 10 and not self.defeat_ten_enemies:
+            self.defeat_ten_enemies = True
+            self.run_achievements += 1
+        if enemies_defeated >= 25 and not self.defeat_twenty_five_enemies:
+            self.defeat_twenty_five_enemies = True
+            self.run_achievements += 1
+        if enemies_defeated >= 50 and not self.defeat_fifty_enemies:
+            self.defeat_fifty_enemies = True
+            self.run_achievements += 1
+
+        # Wave achievements
+        if wave_num > 1 and not self.complete_wave_one:
+            self.complete_wave_one = True
+            self.run_achievements += 1
+        if wave_num > 2 and not self.complete_wave_two:
+            self.complete_wave_two = True
+            self.run_achievements += 1
+        if wave_num > 3 and not self.complete_wave_three:
+            self.complete_wave_three = True
+            self.run_achievements += 1
+
+        return self.run_achievements
+
+    def animation(self):
+        if run_achievements != 0:
+            if run_achievements == 1:
+                ach_ban = pygame.transform.scale_by(pygame.image.load('images/Ach-banner-sing.png'), 5)
+            else:
+                ach_ban = pygame.transform.scale_by(pygame.image.load('images/Ach-ban-mul.png'), 5)            
+
+            WINDOW.blit(ach_ban, (self.ach_ban_x, 50))
+
+            if self.ach_ban_x < 0:
+                self.ach_ban_x += 10
+        
+        else:
+            pass
+        
+        return self.ach_ban_x
 
 waves = {
     1: wave1,
@@ -476,9 +590,21 @@ def set_enemy(enemy):
     
     return enemy
 
+def reset(wave_num, ultimate_charge, cooldown, countdown):
+    player.health = 100
+    enemy_group.empty()
+    wave1.enemies_left = 7
+    wave2.enemies_left = 5
+    wave3.enemies_left = 15
+    wave4.enemies_left = 10
+    wave_num = 1
+    ultimate_charge = 0
+    cooldown = 0
+    countdown = 6
+
+    return wave_num, ultimate_charge, cooldown, countdown
 
 #GAME STATES
-
 
 def gray_overlay():
     overlay = pygame.Surface((1280, 720), pygame.SRCALPHA)  
@@ -535,7 +661,6 @@ def paused_ui():
     ultimate_blit()
     cooldown_blit()
 
-    enemy_group.draw(WINDOW)
 
     left_arrow = left_arrow_base
     up_arrow = up_arrow_base
@@ -661,8 +786,8 @@ def main_menu(arrow_limit):
 
 def inbetween(game_state, countdown, last_update_time):
     gray_overlay()
-    draw_text(f"Wave: {str(wave_num)}", font_way_too_big, WHITE, 500, 200)
-    draw_text(f"{str(countdown)}", font_way_too_big, WHITE, 700, 300)
+    draw_text(f"Wave: {str(wave_num)}", font_way_too_big, WHITE, 515, 250)
+    draw_text(f"{str(countdown)}", font_way_too_big, WHITE, 625, 350)
 
     current_time = time.time()
     if current_time - last_update_time >= 1 and countdown > 0:
@@ -722,6 +847,8 @@ player_pointing_right = pygame.transform.scale_by(pygame.image.load('images/Play
 logo = pygame.transform.scale_by(pygame.image.load('images/Logo.png'), 5)
 small_logo = pygame.image.load('images/Logo.png')
 game_over = pygame.transform.scale_by(pygame.image.load('images/Death Screen.png'), 5)
+
+achievements = Achievements()
 
 #Game loop
 if __name__ == "__main__":
@@ -809,22 +936,22 @@ if __name__ == "__main__":
                             game_state = "active"
                         if arrow_pos == 2:
                             game_state = "main menu"
-                            Wave.reset()
                     elif game_state == "dead":
                         if arrow_pos == 1:
+                            wave_num, ultimate_charge, cooldown, countdown = reset(wave_num, ultimate_charge, cooldown, countdown)
+                            just_reset = True
                             game_state = "active"
-                            Wave.reset()
+
                         if arrow_pos == 2:
                             game_state = "main menu"
-                            Wave.reset()
                         arrow_pos = 1
                     elif game_state == "main menu":
                         current_time = pygame.time.get_ticks()
                         if main_menu_level == "base":
                             if arrow_pos == 1:
-                                game_state = "active"
-                                wave_num = 4
+                                wave_num = 1
                                 last_spawn_time = current_time
+                                game_state = "active"
                             if arrow_pos == 5:
                                 pygame.quit()
                                 exit()  
@@ -894,17 +1021,19 @@ if __name__ == "__main__":
         
             #Blit game ui 
             ui_blit(key_pressed, wave)
+            run_achievements = achievements.check(runs_completed, enemies_defeated, wave_num)
+
+            countdown = 6
 
             if player.health <= 0:
                 game_state = "dead"
                 total_runs += 1
-            
             if wave.enemies_left == 0 and wave_num < 4:
                 wave_num += 1
                 player.health = 100
                 enemy_group.empty()
                 ultimate_charge = 0
-                cooldown = 5
+                cooldown = 0
                 game_state = 'inbetween'
             elif wave.enemies_left == 0 and wave_num == 4:
                 game_state = 'win'
@@ -915,15 +1044,20 @@ if __name__ == "__main__":
 
         elif game_state == "dead":
             arrow_limit = death_screen(arrow_limit)
+            ach_ban_x = achievements.animation()
 
         elif game_state == "main menu":
             arrow_limit = main_menu(arrow_limit)
 
         elif game_state == 'inbetween':
             game_state, countdown, last_update_time = inbetween(game_state, countdown, last_update_time)
+            cooldown_charge = 0
+            inputs = []
 
         elif game_state == 'win':
-            pass
+            ach_ban_x = achievements.animation()
+    
+        print(countdown)
         
         CLOCK.tick(FRAME_RATE)
         pygame.display.update()
