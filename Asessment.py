@@ -2,7 +2,7 @@
 
 Author: Isaac Smith
 School: Hauraki Plains College
-Date: 03/06/2024
+Date: 03/06/2025 - 17/10/2025
 """
 
 # ---------- IMPORTS ----------
@@ -38,8 +38,7 @@ ultimate_charge = 0
 cooldown_charge = 0
 ultimate_status = False
 cooldown = False
-game_state = "active"
-pause_level = "base"
+game_state = "start"
 start_level = "base"
 main_menu_level = "base"
 arrow_limit = 0
@@ -56,52 +55,57 @@ enemy = 0
 walk = 0
 walk_direction = 1
 countdown = 6
-just_reset = False
-
+base_inputs = ['up', 'left', 'down', 'right', 'buffer']
+BID_num = 0
+stage_two_moves = "unknown"
+stage_three_moves = "unknown"
+unknown_with_hyphen = " - Unknown"
+unknown_basic = "Unknown"
 runs_completed = 0
 total_runs = 0
 enemies_defeated = 0
 
+# ---------- COMBO DATA ----------
 COMBOS = {
     'failed combo': {'name': 'Failed',
-                    'damage': 0,
-                    'cooldown level': 100,
-                    'charge unit': 0},
+                        'damage': 0,
+                        'cooldown level': 100,
+                        'charge unit': 0},
     'combo1': {'name':
                'Standard Up',
                'damage': 10,
-               'cooldown level': 5,
+               'cooldown level': 3.5,
                'charge unit': 10,
                'input combo': ['up', 'up', 'up', 'up']},
     'combo2': {'name':
                'Standard Down',
                'damage': 10,
-               'cooldown level': 5,
+               'cooldown level': 3.5,
                'charge unit': 10,
                'input combo': ['down', 'down', 'down', 'down']},
     'combo3': {'name': 'Standard Left',
                'damage': 10,
-               'cooldown level': 5,
+               'cooldown level': 3.5,
                'charge unit': 10,
                'input combo': ['left', 'left', 'left', 'left']},
-    'combo4': {'name':'Standard Right',
+    'combo4': {'name': 'Standard Right',
                'damage': 10,
-               'cooldown level': 5,
+               'cooldown level': 3.5,
                'charge unit': 10,
                'input combo': ['right', 'right', 'right', 'right']},
     'combo5': {'name': 'Floss',
                'damage': 15,
-               'cooldown level': 3.5,
+               'cooldown level': 3,
                'charge unit': 15,
                'input combo': ['left', 'right', 'left', 'right']},
     'combo6': {'name': 'The Hype',
                'damage': 15,
-               'cooldown level': 3.5,
+               'cooldown level': 3,
                'charge unit': 15,
                'input combo': ['up', 'up', 'down', 'down']},
-    'combo7': {'name': 'Flippin Sexy',
+    'combo7': {'name': "Flippin' Sexy",
                'damage': 20,
-               'cooldown level': 3,
+               'cooldown level': 2.5,
                'charge unit': 20,
                'input combo': ['down', 'down', 'left', 'right']},
 
@@ -112,14 +116,17 @@ COMBOS = {
                        'input combo': ['up', 'left', 'down', 'right']}
 }
 
-class Character(pygame.sprite.Sprite):
-    """Handles character traits and enemy spawnging, moving, and animation"""
+# ---------- CLASSES ----------
 
+class Character(pygame.sprite.Sprite):
+    """Handles character traits and enemy spawnging, moving, and animation."""
 
     def __init__(
-            self, health, damage, speed, left_spawn_x, right_spawn_x, left_stop_x, right_stop_x, 
-            x=0, y=0, animation_frames=None, animation_delay=200, spawn_y=0):
+            self, health, damage, speed, left_spawn_x, right_spawn_x,
+            left_stop_x, right_stop_x, x=0, y=0,
+            animation_frames=None, animation_delay=200, spawn_y=0):
         """Sets all traits for characters and what needs to be set for each enemy"""
+
         super().__init__()
         self.health = health
         self.damage = damage
@@ -145,8 +152,9 @@ class Character(pygame.sprite.Sprite):
         self.damaging = False
         self.damage_direction = 0
 
+
     def copy(self):
-        """Every peramter that needs to be copied over to every individual enemy"""
+        """Every peramter that copies over to every individual enemy."""
         return Character(
             self.health,
             self.damage,
@@ -162,83 +170,114 @@ class Character(pygame.sprite.Sprite):
             self.spawn_y
         )
 
+
     def update(self):
+        """Enemy movement and damaging."""
         if not self.damaging:
-            #General Enemy Movement
+            # General Enemy Movement
             if self.rect.x > self.right_stop_x:
                 self.rect.x -= self.speed
             elif self.rect.x < self.left_stop_x:
                 self.rect.x += self.speed
 
-            #Damage Player
-            if self.right_stop_x + 5 > self.rect.x < self.right_stop_x + 10 and self.rect.x > 600:
+            # Damage Player
+            if (
+                self.right_stop_x + 5 > self.rect.x < self.right_stop_x + 10
+                and self.rect.x > 600
+            ):
                 self.damaging = True
-                self.damage_direction = 1  
+                self.damage_direction = 1
                 player.health -= enemy.damage
-            elif self.left_stop_x - 10 < self.rect.x > self.left_stop_x - 5 and self.rect.x < 600:
+            elif (
+                self.left_stop_x - 10 < self.rect.x > self.left_stop_x - 5
+                and self.rect.x < 600
+            ):
                 self.damaging = True
-                self.damage_direction = -1  
+                self.damage_direction = -1
                 player.health -= enemy.damage
-        
-        #Reset Enemy Pos After Damaging
+
+        # Reset Enemy Pos After Damaging
         else:
             self.rect.x += self.damage_direction * 10
-            if self.damage_direction == 1 and self.rect.x >= enemy.right_spawn_x:
+            if (
+                self.damage_direction == 1 
+                and self.rect.x >= enemy.right_spawn_x
+            ):
                 self.damaging = False
-            elif self.damage_direction == -1 and self.rect.x <= enemy.left_spawn_x:
+            elif (
+                self.damage_direction == -1
+                and self.rect.x <= enemy.left_spawn_x
+            ):
                 self.damaging = False
 
+
     def animate(self, direction=1):
-        current_time = pygame.time.get_ticks() #Takes the current time
-        if current_time - self.last_animation_time >= self.animation_delay and self.animation_frames: #Checks to see if it's time to change the frame
-            self.current_frame_index = (self.current_frame_index + direction) % len(self.animation_frames)
+        """Enemy animation."""
+        current_time = pygame.time.get_ticks()  # Takes the current time
+        if (  # Checks to see if it's time to change the frame
+            current_time - self.last_animation_time >= self.animation_delay 
+            and self.animation_frames
+        ):  
+            self.current_frame_index = (
+                (self.current_frame_index + direction) % len(self.animation_frames))
             self.image = self.animation_frames[self.current_frame_index]
             self.rect = self.image.get_rect(center=self.rect.center)
             self.last_animation_time = current_time
 
+
+
 player = Character(100, None, None, None, None, None, None, None)
 
-#enemy = Character(health, damage, speed, left_spawn_x, right_spawn_x, left_stop_x, right_stop_x, 0, 0, None, anim_delay, spawn_y)
-
-snothler = Character(15, 15, 2, -255, 1455, 390, 645, 0, 0, None, 600, spawn_y=10)
+snothler = Character(
+    15, 15, 2, -255, 1455, 390, 645, 0, 0, None, 600, spawn_y=10)
 snothler_frames = [
-    pygame.transform.scale_by(pygame.image.load('images/enemies/Snothler-1.png'), 5),
-    pygame.transform.scale_by(pygame.image.load('images/enemies/Snothler-2.png'), 5)
+    pygame.transform.scale_by(
+        pygame.image.load('images/enemies/Snothler-1.png'), 5),
+    pygame.transform.scale_by(
+        pygame.image.load('images/enemies/Snothler-2.png'), 5)
 ]
 snothler.animation_frames = snothler_frames
 snothler.image = snothler.animation_frames[0]
 snothler.current_frame_index = 0
 snothler.rect = snothler.image.get_rect()
 
-boulder_bro = Character(40, 30, 1, -481, 1275, 165, 640, 0, 0, None, 700, spawn_y=50)
+boulder_bro = Character(
+    40, 30, 1, -481, 1275, 165, 640, 0, 0, None, 700, spawn_y=50)
 boulder_bro_frames = [
-    pygame.transform.scale_by(pygame.image.load('images/enemies/Boulder-bro-walking-1.png'), 5),
-    pygame.transform.scale_by(pygame.image.load('images/enemies/Boulder-Bro-Stationary.png'), 5)
+    pygame.transform.scale_by(
+        pygame.image.load('images/enemies/Boulder-bro-walking-1.png'), 5),
+    pygame.transform.scale_by(
+        pygame.image.load('images/enemies/Boulder-Bro-Stationary.png'), 5)
 ]
 boulder_bro.animation_frames = boulder_bro_frames
 boulder_bro.image = boulder_bro.animation_frames[0]
 boulder_bro.current_frame_index = 0
 boulder_bro.rect = boulder_bro.image.get_rect()
 
-little_timmy = Character(15, 5, 20, -220, 1310, 420, 646, 0, 0, None, 0, spawn_y=300)
+little_timmy = Character(
+    15, 5, 20, -220, 1310, 420, 646, 0, 0, None, 0, spawn_y=300)
 little_timmy_frames = [
-    pygame.transform.scale_by(pygame.image.load('images/enemies/Little-Timmy.png'), 5)
+    pygame.transform.scale_by(
+        pygame.image.load('images/enemies/Little-Timmy.png'), 5)
 ]
 little_timmy.animation_frames = little_timmy_frames
 little_timmy.image = little_timmy.animation_frames[0]
 little_timmy.current_frame_index = 0
 little_timmy.rect = little_timmy.image.get_rect()
 
-the_vulture = Character(20, 30, 5, -655, 1200, -20, 640, 0, 0, None, 0, spawn_y=50)
+the_vulture = Character(
+    20, 30, 5, -655, 1200, -20, 640, 0, 0, None, 0, spawn_y=50)
 the_vulture_frames = [
-    pygame.transform.scale_by(pygame.image.load('images/enemies/The-Vulture.png'), 5)
+    pygame.transform.scale_by(
+        pygame.image.load('images/enemies/The-Vulture.png'), 5)
 ]
 the_vulture.animation_frames = the_vulture_frames
 the_vulture.image = the_vulture.animation_frames[0]
 the_vulture.current_frame_index = 0
 the_vulture.rect = the_vulture.image.get_rect()
 
-patient_zero = Character(100, None, None, None, None, None, None, None, None)
+patient_zero = Character(
+    100, None, None, None, None, None, None, None, None)
 
 enemy_group = pygame.sprite.Group()
 
@@ -279,15 +318,24 @@ wave3 = Wave(little_timmy, 15, 5, 15)
 wave4 = Wave(the_vulture, 10, 7, 10)
 wave5 = Wave(patient_zero, 1, 5, 1)
 
+waves = {
+    1: wave1,
+    2: wave2,
+    3: wave3,
+    4: wave4,
+    5: wave5,
+}
 
 class Achievements():
     def __init__(self):
         self.complete_one_run = False
         self.complete_five_runs = False
         self.complete_ten_runs = False
+
         self.defeat_ten_enemies = False
         self.defeat_twenty_five_enemies = False
         self.defeat_fifty_enemies = False
+
         self.complete_wave_one = False
         self.complete_wave_two = False
         self.complete_wave_three = False
@@ -296,7 +344,9 @@ class Achievements():
 
         self.ach_ban_x = -520
 
+
     def check(self, runs_completed, enemies_defeated, wave_num):
+        # Completion achievements
         if runs_completed >= 1 and not self.complete_one_run:
             self.complete_one_run = True
             self.run_achievements += 1
@@ -331,9 +381,91 @@ class Achievements():
 
         return self.run_achievements
 
+
+    def menu_display(self):
+
+        draw_text("Achievements:", font_big, WHITE, 515, 100)
+
+        draw_text("Complete 1 Run", font_medium, WHITE, 150, 200)
+        if self.complete_one_run:
+            WINDOW.blit(yes, (400, 195))
+        else:
+            WINDOW.blit(no, (400, 195))
+
+        draw_text("Complete 5 Runs", font_medium, WHITE, 150, 400)
+        if self.complete_five_runs:
+            WINDOW.blit(yes, (400, 395))
+        else:
+            WINDOW.blit(no, (400, 395))
+        
+        draw_text("Complete 10 Runs", font_medium, WHITE, 150, 600)
+        if self.complete_ten_runs:
+            WINDOW.blit(yes, (400, 595))
+        else:
+            WINDOW.blit(no, (400, 595))
+
+        
+        draw_text("Defeat 10 Enemies", font_medium, WHITE, 500, 200)
+        if self.defeat_ten_enemies:
+            WINDOW.blit(yes, (750, 195))
+        else:
+            WINDOW.blit(no, (750, 195))
+
+        draw_text("Defeat 25 Enemies", font_medium, WHITE, 500, 400)
+        if self.defeat_twenty_five_enemies:
+            WINDOW.blit(yes, (750, 395))
+        else:
+            WINDOW.blit(no, (750, 395))
+        
+        draw_text("Defeat 50 Enemies", font_medium, WHITE, 500, 600)
+        if self.defeat_fifty_enemies:
+            WINDOW.blit(yes, (750, 595))
+        else:
+            WINDOW.blit(no, (750, 595))
+
+        draw_text("Complete Wave 1", font_medium, WHITE, 850, 200)
+        if self.complete_wave_one:
+            WINDOW.blit(yes, (1100, 195))
+        else:
+            WINDOW.blit(no, (1100, 195))
+
+        draw_text("Complete Wave 2", font_medium, WHITE, 850, 400)
+        if self.complete_wave_two:
+            WINDOW.blit(yes, (1100, 395))
+        else:
+            WINDOW.blit(no, (1100, 395))
+        
+        draw_text("Complete Wave 3", font_medium, WHITE, 850, 600)
+        if self.complete_wave_three:
+            WINDOW.blit(yes, (1100, 595))
+        else:
+            WINDOW.blit(no, (1100, 595))
+
+
+    def other_displays(self):
+        if total_runs != 0:
+            snothler_awareness = "known"
+        else:
+            snothler_awareness = "unknown"
+        if self.complete_wave_one:
+            bro_awareness = "known"
+        else:
+            bro_awareness = "uknown"
+        if self.complete_wave_two:
+            stage_two_moves = timmy_awareness = "known"
+        else:
+            stage_two_moves = timmy_awareness = "unknown"
+        if self.complete_wave_three:
+            stage_three_moves = vulture_awareness = "known"
+        else:
+            stage_three_moves = vulture_awareness = "unknown"
+
+        return stage_two_moves, stage_three_moves, snothler_awareness, bro_awareness, timmy_awareness, vulture_awareness
+
+
     def animation(self):
-        if run_achievements != 0:
-            if run_achievements == 1:
+        if self.run_achievements != 0:
+            if self.run_achievements == 1:
                 ach_ban = pygame.transform.scale_by(pygame.image.load('images/Ach-banner-sing.png'), 5)
             else:
                 ach_ban = pygame.transform.scale_by(pygame.image.load('images/Ach-ban-mul.png'), 5)            
@@ -342,23 +474,18 @@ class Achievements():
 
             if self.ach_ban_x < 0:
                 self.ach_ban_x += 10
-        
         else:
             pass
         
         return self.ach_ban_x
 
-waves = {
-    1: wave1,
-    2: wave2,
-    3: wave3,
-    4: wave4,
-    5: wave5,
-}
+
+# ---------- FUNCTIONS ----------
 
 def draw_text(text, font, color, x, y):
     text = font.render(text, True, color)
     WINDOW.blit(text, (x, y))
+
 
 def load_uc_images(start=2, end=100, step=2, scale=5):
     uc_images = {}
@@ -368,6 +495,7 @@ def load_uc_images(start=2, end=100, step=2, scale=5):
         scaled_image = pygame.transform.scale_by(uc_image, scale)
         uc_images[i] = scaled_image
     return uc_images
+
 
 def ultimate_blit():
     if ultimate_charge == 0:
@@ -379,6 +507,7 @@ def ultimate_blit():
 
     WINDOW.blit(ultimate_gauge, (75, 600))
 
+
 def load_c_images(start=2, end=100, step=2, scale=5):
     c_images = {}
     for i in range(start, end + 1, step):
@@ -387,6 +516,7 @@ def load_c_images(start=2, end=100, step=2, scale=5):
         scaled_image = pygame.transform.scale_by(c_image, scale)
         c_images[i] = scaled_image
     return c_images
+
 
 def cooldown_blit():
     if cooldown_charge == 0:
@@ -397,6 +527,7 @@ def cooldown_blit():
 
     WINDOW.blit(cooldown_gauge, (935,600))
 
+
 def on_cooldown(cooldown, cooldown_charge):
     if cooldown:
         cooldown_charge -= COMBOS[output_combo]['cooldown level']
@@ -404,6 +535,7 @@ def on_cooldown(cooldown, cooldown_charge):
             cooldown_charge = 0
             cooldown = False
     return cooldown, cooldown_charge
+
 
 def load_hb_images(start=4, end=100, step=4, scale=5):
     hb_images = {}
@@ -414,6 +546,7 @@ def load_hb_images(start=4, end=100, step=4, scale=5):
         hb_images[i] = scaled_image
     return hb_images
 
+
 def hb_blit():
     if player.health <= 0:
         health_bar = hb_empty
@@ -422,6 +555,7 @@ def hb_blit():
         health_bar = hb_images.get(clamped_player_health, hb_empty)
 
     WINDOW.blit(health_bar, (1125,30))
+
 
 def arrows_functionality():
     if key_pressed[pygame.K_LEFT]:
@@ -451,6 +585,7 @@ def arrows_functionality():
     else:
         right_arrow = right_arrow_base
         WINDOW.blit(right_arrow, (780,560))
+
 
 def inputs_display():
     if inputs and len(inputs) > 0:
@@ -520,6 +655,7 @@ def inputs_display():
         WINDOW.blit(mini_arrow_down, (170, 530))
         WINDOW.blit(mini_arrow_right, (200, 530))
 
+
 def check_combo():
     #Regular combos
     if inputs == COMBOS['combo1']['input combo']:
@@ -542,6 +678,7 @@ def check_combo():
         output_combo = 'failed combo'
         
     return output_combo
+
 
 def player_pointing():
     if not cooldown:
@@ -573,8 +710,10 @@ def player_pointing():
 
     WINDOW.blit(player, (player_x, player_y))
 
+
 def set_wave(wave_num):
     return waves.get(wave_num, None)
+
 
 def set_enemy(enemy):
     if wave_num == 1:
@@ -590,6 +729,7 @@ def set_enemy(enemy):
     
     return enemy
 
+
 def reset(wave_num, ultimate_charge, cooldown, countdown):
     player.health = 100
     enemy_group.empty()
@@ -604,12 +744,11 @@ def reset(wave_num, ultimate_charge, cooldown, countdown):
 
     return wave_num, ultimate_charge, cooldown, countdown
 
-#GAME STATES
-
 def gray_overlay():
     overlay = pygame.Surface((1280, 720), pygame.SRCALPHA)  
     overlay.fill((128, 128, 128, 150))
     WINDOW.blit(overlay, (0, 0))
+
 
 def ui_info_text():
     #Wave number
@@ -627,6 +766,15 @@ def ui_info_text():
     #Gauge titles
     draw_text("Ultimate Charge", font_small, WHITE, 142.5, 575)
     draw_text("Cooldown", font_small, WHITE, 1027.5, 575)
+
+
+def tutorial():
+    draw_text("Use the arrow keys to create combos", font_small, WHITE, 25, 70)
+    draw_text("Press Z to execute them, or X to clear your current inputs", font_small, WHITE, 25, 95)
+
+
+#GAME STATES
+
 
 def ui_blit(key_pressed, wave):
     """Displays all parts of the base game UI"""
@@ -654,6 +802,10 @@ def ui_blit(key_pressed, wave):
 
     ui_info_text()
 
+    if total_runs == 0:
+        tutorial()
+
+
 def paused_ui():
     hb_blit()
     draw_text(player_name, font_small, WHITE, 1135, 15)
@@ -673,6 +825,7 @@ def paused_ui():
 
     ui_info_text()
 
+
 def pause_screen(arrow_limit):
     paused_ui()
     #Gray overlay
@@ -690,6 +843,7 @@ def pause_screen(arrow_limit):
         WINDOW.blit(selection_arrow, (377.5, 390))
 
     return arrow_limit
+
 
 def start_screen(arrow_limit):
     #Gray overlay
@@ -731,6 +885,7 @@ def start_screen(arrow_limit):
 
     return arrow_limit
 
+
 def death_screen(arrow_limit):
     #Gray overlay
     gray_overlay()
@@ -750,7 +905,11 @@ def death_screen(arrow_limit):
 
     return arrow_limit
 
-def main_menu(arrow_limit):
+
+def main_menu(arrow_limit, countdown, last_update_time, BID_num):
+
+    stage_two_moves, stage_three_moves, snothler_awareness, bro_awareness, timmy_awareness, vulture_awareness = achievements.other_displays()
+
     #Gray overlay
     gray_overlay()
 
@@ -782,7 +941,148 @@ def main_menu(arrow_limit):
         elif arrow_pos == 5:
             WINDOW.blit(selection_arrow, (447.5, 440))
 
-    return arrow_limit
+    if main_menu_level == 'enemies':
+        draw_text("Enemies:", font_big, WHITE, 530, 15)
+        if snothler_awareness == "known":
+            snothler_name = "Snothler"
+            snothler_health = snothler.health
+            snothler_damage = snothler.damage
+        else:
+            snothler_name = snothler_health = snothler_damage = unknown_basic
+
+        WINDOW.blit(pygame.transform.flip(pygame.image.load('images/enemies/Snothler-1.png'), True, False), (528, 60))
+        draw_text(f"{snothler_name}", font_medium, WHITE, 650, 60)
+        draw_text(f"Health: {snothler_health}", font_small, WHITE, 650, 80)
+        draw_text(f"Damage: {snothler_damage}", font_small, WHITE, 650, 95)
+
+        if bro_awareness == "known":
+            bro_name = "Boulder Bro"
+            bro_health = boulder_bro.health
+            bro_damage = boulder_bro.damage
+        else:
+            bro_name = bro_damage = bro_health = unknown_basic
+        
+        WINDOW.blit(pygame.transform.flip(pygame.image.load('images/enemies/Boulder-Bro-Stationary.png'), True, False), (498, 245))
+        draw_text(f"{bro_name}", font_medium, WHITE, 650, 245)
+        draw_text(f"Health: {bro_health}", font_small, WHITE, 650, 265)
+        draw_text(f"Damage: {bro_damage}", font_small, WHITE, 650, 280)
+
+        if timmy_awareness == "known":
+            timmy_name = "Little Timmy"
+            timmy_health = little_timmy.health
+            timmy_damage = little_timmy.damage
+        else:
+            timmy_name = timmy_health = timmy_damage = unknown_basic
+        
+        WINDOW.blit(pygame.transform.flip(pygame.image.load('images/enemies/Little-Timmy.png'), True, False), (528, 455))
+        draw_text(f"{timmy_name}", font_medium, WHITE, 650, 455)
+        draw_text(f"Health: {timmy_health}", font_small, WHITE, 650, 475)
+        draw_text(f"Damage: {timmy_damage}", font_small, WHITE, 650, 490)
+
+        if vulture_awareness == "known":
+            vulture_name = "The Vulture"
+            vulture_health = the_vulture.health
+            vulture_damage = the_vulture.damage
+        else:
+            vulture_name = vulture_health = vulture_damage = unknown_basic
+        
+        WINDOW.blit(pygame.transform.flip(pygame.image.load('images/enemies/The-Vulture.png'), True, False), (480, 560))
+        draw_text(f"{vulture_name}", font_medium, WHITE, 650, 560)
+        draw_text(f"Health: {vulture_health}", font_small, WHITE, 650, 580)
+        draw_text(f"Damage: {vulture_damage}", font_small, WHITE, 650, 595)
+    
+    if main_menu_level == 'moves':
+        draw_text("Moves:", font_big, WHITE, 530, 150)
+        
+        # Rotate through the four different basic combos
+        current_time = time.time()
+        if current_time - last_update_time >= 1 and BID_num < 4:  
+            BID_num += 1
+            if BID_num == 4:
+                BID_num = 0
+            last_update_time = current_time   
+
+        base_inputs_display = base_inputs[BID_num]  
+
+        if base_inputs_display == base_inputs[0]:
+            move_arrow_base = mini_arrow_up
+        elif base_inputs_display == base_inputs[1]:
+            move_arrow_base = mini_arrow_left
+        elif base_inputs_display == base_inputs[2]:
+            move_arrow_base = mini_arrow_down
+        elif base_inputs_display == base_inputs[3]:
+            move_arrow_base = mini_arrow_right
+        
+        # Display basic combos
+        WINDOW.blit(move_arrow_base, (530, 200))
+        WINDOW.blit(move_arrow_base, (560, 200))
+        WINDOW.blit(move_arrow_base, (590, 200))
+        WINDOW.blit(move_arrow_base, (620, 200))
+
+        draw_text(" - Basic Combo", font_medium, WHITE, 640, 200)
+        draw_text("Damage: 10", font_small, WHITE, 530, 230)
+        
+        # Keep stage 2 combos hidden if not known
+        if stage_two_moves == "known":
+            hype_arrow_one = mini_arrow_up
+            hype_arrow_two = mini_arrow_up
+            hype_arrow_three = mini_arrow_down
+            hype_arrow_four = mini_arrow_down
+
+            floss_arrow_one = mini_arrow_left
+            floss_arrow_two = mini_arrow_right
+            floss_arrow_three = mini_arrow_left
+            floss_arrow_four = mini_arrow_right
+
+            hype_name = f" - {COMBOS['combo6']['name']}"
+            floss_name = f" - {COMBOS['combo5']['name']}"
+        else:
+            hype_arrow_one = hype_arrow_two = hype_arrow_three = hype_arrow_four = floss_arrow_one = floss_arrow_two = floss_arrow_three = floss_arrow_four = unknown_arrow
+            hype_name = floss_name = unknown_with_hyphen
+
+        # Display stage 2 combos
+        WINDOW.blit(hype_arrow_one, (530, 300))
+        WINDOW.blit(hype_arrow_two, (560, 300))
+        WINDOW.blit(hype_arrow_three, (590, 300))
+        WINDOW.blit(hype_arrow_four, (620, 300))
+
+        draw_text(hype_name, font_medium, WHITE, 640, 300)
+        draw_text(f"Damage: {COMBOS['combo6']['damage']}", font_small, WHITE, 530, 330)
+
+        WINDOW.blit(floss_arrow_one, (530, 400))
+        WINDOW.blit(floss_arrow_two, (560, 400))
+        WINDOW.blit(floss_arrow_three, (590, 400))
+        WINDOW.blit(floss_arrow_four, (620, 400))
+
+        draw_text(floss_name, font_medium, WHITE, 640, 400)
+        draw_text(f"Damage: {COMBOS['combo6']['damage']}", font_small, WHITE, 530, 430)
+
+        # Keep stage 3 combos hidden if not known
+        if stage_three_moves == "known":
+            flippin_arrow_one = mini_arrow_down
+            flippin_arrow_two = mini_arrow_down
+            flippin_arrow_three = mini_arrow_left
+            flippin_arrow_four = mini_arrow_right
+
+            flippin_name = f" - {COMBOS['combo7']['name']}"
+        else:
+            flippin_arrow_one = flippin_arrow_two = flippin_arrow_three = flippin_arrow_four = unknown_arrow
+            flippin_name = unknown_with_hyphen
+
+        # Display stage 3 combos
+        WINDOW.blit(flippin_arrow_one, (530, 500))
+        WINDOW.blit(flippin_arrow_two, (560, 500))
+        WINDOW.blit(flippin_arrow_three, (590, 500))
+        WINDOW.blit(flippin_arrow_four, (620, 500))
+
+        draw_text(flippin_name, font_medium, WHITE, 640, 500)
+        draw_text(f"Damage: {COMBOS['combo7']['damage']}", font_small, WHITE, 530, 530)
+
+    if main_menu_level == 'achievements':
+        achievements.menu_display()
+
+    return arrow_limit, countdown, last_update_time, BID_num
+
 
 def inbetween(game_state, countdown, last_update_time):
     gray_overlay()
@@ -800,22 +1100,23 @@ def inbetween(game_state, countdown, last_update_time):
     return game_state, countdown, last_update_time
 
 
-# ---------------------------------- SPRITES ----------------------------------
+# ---------- SPRITES ----------
 
-#Placeholder image
+
+# Placeholder image
 blank = pygame.transform.scale_by(pygame.image.load('images/Blank.png'), 5)
 
-#Loading background
+# Loading background
 background = pygame.transform.scale_by(pygame.image.load('images/DDDZA-Background.png'), 5)
 
-#Gauge sprites
+# Gauge sprites
 gauge_0 = pygame.transform.scale_by(pygame.image.load('images/gauges/Gauge-0%.png'), 5)
 hb_empty = pygame.transform.scale_by(pygame.image.load('images/health bar/HB-Empty.png'), 5)
 ultimate_charge_images = load_uc_images()
 cooldown_charge_images = load_c_images()
 hb_images = load_hb_images()
 
-#Arrows
+# Arrows
 up_arrow_base = pygame.transform.scale_by(pygame.image.load('images/arrows/up-arrow.png'), 5)
 up_arrow_pressed = pygame.transform.scale_by(pygame.image.load('images/arrows/up-arrow-pressed.png'), 5)
 down_arrow_base = pygame.transform.scale_by(pygame.image.load('images/arrows/down-arrow.png'), 5)
@@ -825,32 +1126,38 @@ left_arrow_pressed = pygame.transform.scale_by(pygame.image.load('images/arrows/
 right_arrow_base = pygame.transform.scale_by(pygame.image.load('images/arrows/right-arrow.png'), 5)
 right_arrow_pressed = pygame.transform.scale_by(pygame.image.load('images/arrows/right-arrow-pressed.png'), 5)
 
-#Escape Image
+# Escape Image
 esc_bg = pygame.transform.scale_by(pygame.image.load('images/esc.png'), 5)
 
-#Selection Arrow
+# Selection Arrow
 selection_arrow = pygame.transform.scale_by(pygame.image.load('images/arrows/Arrow.png'), 5)
 
-#Mini arrows that tell you what your inputs currently look like
+# Mini arrows that tell you what your inputs currently look like
 mini_arrow_up = pygame.transform.scale_by(pygame.image.load('images/arrows/Input-list-up.png'), 5)
 mini_arrow_down = pygame.transform.scale_by(pygame.image.load('images/arrows/Input-list-down.png'), 5)
 mini_arrow_left = pygame.transform.scale_by(pygame.image.load('images/arrows/Input-list-left.png'), 5)
 mini_arrow_right = pygame.transform.scale_by(pygame.image.load('images/arrows/Input-list-right.png'), 5)
+unknown_arrow = pygame.transform.scale_by(pygame.image.load('images/?.png'), 5)
 
-#Player Sprites
+# Player Sprites
 player_default = pygame.transform.scale_by(pygame.image.load('images/Player/Player-Standard.png'), 5)
 player_pointing_up = pygame.transform.scale_by(pygame.image.load('images/Player/Pointing/Player-Pointing-Up.png'), 5)
 player_pointing_down = pygame.transform.scale_by(pygame.image.load('images/Player/Pointing/Player-Pointing-Down.png'), 5)
 player_pointing_left = pygame.transform.scale_by(pygame.image.load('images/Player/Pointing/Player-Pointing-Left.png'), 5)
 player_pointing_right = pygame.transform.scale_by(pygame.image.load('images/Player/Pointing/Player-Pointing-Right.png'), 5)
 
+# Logos
 logo = pygame.transform.scale_by(pygame.image.load('images/Logo.png'), 5)
 small_logo = pygame.image.load('images/Logo.png')
 game_over = pygame.transform.scale_by(pygame.image.load('images/Death Screen.png'), 5)
 
+# Checkboxes
+yes = pygame.transform.scale_by(pygame.image.load('images/Yes.png'), 5)
+no = pygame.transform.scale_by(pygame.image.load('images/No.png'), 5)
+
 achievements = Achievements()
 
-#Game loop
+# ---------- GAME LOOP ----------
 if __name__ == "__main__":
     while True:
         for event in pygame.event.get():
@@ -931,27 +1238,37 @@ if __name__ == "__main__":
                         if start_level == "new player":
                             if arrow_pos == 2:
                                 start_level = "base"   
+                    
                     elif game_state == "paused":
                         if arrow_pos == 1:
                             game_state = "active"
                         if arrow_pos == 2:
+                            arrow_pos = 1
+                            total_runs += 1
+                            main_menu_level = 'base'
                             game_state = "main menu"
+                    
                     elif game_state == "dead":
                         if arrow_pos == 1:
                             wave_num, ultimate_charge, cooldown, countdown = reset(wave_num, ultimate_charge, cooldown, countdown)
-                            just_reset = True
                             game_state = "active"
-
                         if arrow_pos == 2:
                             game_state = "main menu"
+                            main_menu_level = "base"
                         arrow_pos = 1
+                    
                     elif game_state == "main menu":
                         current_time = pygame.time.get_ticks()
                         if main_menu_level == "base":
                             if arrow_pos == 1:
-                                wave_num = 1
                                 last_spawn_time = current_time
                                 game_state = "active"
+                            if arrow_pos == 2:
+                                main_menu_level = 'enemies'
+                            if arrow_pos == 3:
+                                main_menu_level = 'moves'
+                            if arrow_pos == 4:
+                                main_menu_level = 'achievements'
                             if arrow_pos == 5:
                                 pygame.quit()
                                 exit()  
@@ -960,17 +1277,21 @@ if __name__ == "__main__":
                     if game_state == "start":
                         if start_level == "new player" and arrow_pos == 2 or start_level == "returning":
                             start_level = "base"
+                    
                     elif game_state == "paused":
                         game_state = "active"
+                    
+                    elif game_state == 'main menu':
+                        if main_menu_level != 'base':
+                            main_menu_level = 'base'
                 
                 if event.key == pygame.K_ESCAPE:
                     if game_state == "active":
                         game_state = "paused"
-                        pause_level = "base"
                         arrow_pos = 1
+                    
                     elif game_state == "paused":
                         game_state = "active"
-                        pause_level = "base"
                         arrow_pos = 1
                 
                 if event.key == pygame.K_RETURN:
@@ -978,6 +1299,7 @@ if __name__ == "__main__":
                         if start_level == "new player":
                                 if arrow_pos == 1 and player_name != '':
                                     game_state = "main menu"
+                                    main_menu_level = 'base'
 
                 #Selection arrow movement
                 if game_state != "active":
@@ -1041,13 +1363,17 @@ if __name__ == "__main__":
         elif game_state == "paused":
             #Blit pause screen
             arrow_limit = pause_screen(arrow_limit)
+            ach_ban_x = achievements.animation()
 
         elif game_state == "dead":
             arrow_limit = death_screen(arrow_limit)
             ach_ban_x = achievements.animation()
 
         elif game_state == "main menu":
-            arrow_limit = main_menu(arrow_limit)
+            arrow_limit, countdown, last_update_time, BID_num = main_menu(arrow_limit, countdown, last_update_time, BID_num)
+            achievements.ach_ban_x = -520
+            achievements.run_achievements = 0
+            wave_num, ultimate_charge, cooldown, countdown = reset(wave_num, ultimate_charge, cooldown, countdown)
 
         elif game_state == 'inbetween':
             game_state, countdown, last_update_time = inbetween(game_state, countdown, last_update_time)
@@ -1056,8 +1382,6 @@ if __name__ == "__main__":
 
         elif game_state == 'win':
             ach_ban_x = achievements.animation()
-    
-        print(countdown)
-        
+
         CLOCK.tick(FRAME_RATE)
         pygame.display.update()
