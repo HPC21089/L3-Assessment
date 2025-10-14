@@ -574,6 +574,7 @@ WINDOW = display.get_window()
 
 # ---------- FUNCTIONS ----------
 
+
 def draw_text(text, font, color, x, y):
     """Create stencil for drawing text."""
     text = font.render(text, True, color)
@@ -921,7 +922,7 @@ def tutorial():
         SMALL, WHITE, 25, 95)
 
 
-#GAME STATES
+# Game States
 
 
 def active_ui_blit(key_pressed, wave):
@@ -976,7 +977,7 @@ def pause_screen(arrow_limit):
     return arrow_limit
 
 
-def start_screen(arrow_limit):
+def start_screen():
     """Display all parts of the start screen UI."""
     # Gray overlay
     gray_overlay()
@@ -990,37 +991,13 @@ def start_screen(arrow_limit):
         "X to uhhh, do the opposite or whatever", SMALL, WHITE, 483, 680)
     draw_text("Arrow keys to move to arrow", SMALL, WHITE, 520, 700)
 
-    # Base screen
-    if start_level == "base":
-        # Selection text
-        draw_text("NEW PLAYER", BIG, WHITE, 525.5, 475)
-        draw_text("RETURNING PLAYER", BIG, WHITE, 467.5, 575)
+    # New player text
+    draw_text("INPUT NAME:", BIG, WHITE, 527.5, 475)
+    draw_text(player_name, BIG, WHITE, 525.5, 525)
 
-        # Selection arrow
-        arrow_limit = 2
-        if arrow_pos == 1:
-            WINDOW.blit(selection_arrow, (443, 465))
-        elif arrow_pos == 2:
-            WINDOW.blit(selection_arrow, (385, 565))
-
-    # New player screen
-    if start_level == "new player":
-        draw_text("INPUT NAME:", BIG, WHITE, 527.5, 475)
-        draw_text("BACK", BIG, WHITE, 590, 600)
-        draw_text(player_name, BIG, WHITE, 525.5, 525)
-
-        # Player name instructions
-        if player_name != '':
-            draw_text("Enter to confirm", SMALL, WHITE, 756, 489)
-
-        # Selection arrow
-        arrow_limit = 2
-        if arrow_pos == 1:
-            WINDOW.blit(selection_arrow, (444, 465))
-        elif arrow_pos == 2:
-            WINDOW.blit(selection_arrow, (507.5, 590))
-
-    return arrow_limit
+    # Player name instructions
+    if player_name != '':
+        draw_text("Enter to confirm", SMALL, WHITE, 756, 489)
 
 
 def death_screen(arrow_limit):
@@ -1415,23 +1392,20 @@ if __name__ == "__main__":
             if event.type == pygame.KEYDOWN:
                 # Player name input
                 if game_state == "start":
-                    if start_level == "new player":
-                        if arrow_pos == 1:
-                            # Remove last character
-                            if event.key == pygame.K_BACKSPACE:
-                                player_name = player_name[:-1]
-                            # No input from any of these keys
-                            elif (
-                                event.key == pygame.K_RETURN
-                                or event.key == pygame.K_ESCAPE
-                                or event.key
-                                    ) == pygame.K_TAB:
-                                pass
-                            else:
-                                # Give a character limit of 6
-                                if len(player_name) < 6:
-                                    # Key inputs add to player_name
-                                    player_name += event.unicode
+                    # Remove last character
+                    if event.key == pygame.K_BACKSPACE:
+                        player_name = player_name[:-1]
+                    # No input from any of these keys
+                    elif (
+                        event.key == pygame.K_RETURN
+                        or event.key == pygame.K_ESCAPE
+                            or event.key == pygame.K_TAB):
+                        pass
+                    else:
+                        # Give a character limit of 6
+                        if len(player_name) < 6:
+                            # Key inputs add to player_name
+                            player_name += event.unicode
 
                 if game_state == "active":
                     if not cooldown:
@@ -1504,22 +1478,8 @@ if __name__ == "__main__":
             if event.type == pygame.KEYUP:
                 # Progression
                 if event.key == pygame.K_z:
-                    # Start screens
-                    if game_state == "start":
-                        if start_level == "base":
-                            # Base to new player
-                            if arrow_pos == 1:
-                                start_level = "new player"
-                            # Base to returning player
-                            if arrow_pos == 2:
-                                start_level = "returning"
-                        # New player to base
-                        if start_level == "new player":
-                            if arrow_pos == 2:
-                                start_level = "base"
-
                     # Pause screen
-                    elif game_state == "paused":
+                    if game_state == "paused":
                         # Unpause
                         if arrow_pos == 1:
                             game_state = "active"
@@ -1572,16 +1532,8 @@ if __name__ == "__main__":
 
                 # Going back
                 if event.key == pygame.K_x:
-                    # Start screens
-                    if game_state == "start":
-                        # New / returning player to base
-                        if (start_level == "new player"
-                            and arrow_pos == 2
-                                or start_level) == "returning":
-                            start_level = "base"
-
                     # Pause screen
-                    elif game_state == "paused":
+                    if game_state == "paused":
                         # Unpause
                         game_state = "active"
 
@@ -1606,11 +1558,10 @@ if __name__ == "__main__":
                 # Start screen to main menu
                 if event.key == pygame.K_RETURN:
                     if game_state == 'start':
-                        if start_level == "new player":
-                            # Only progress if player has inputted a name
-                            if arrow_pos == 1 and player_name != '':
-                                game_state = "main menu"
-                                main_menu_level = 'base'
+                        # Only progress if player has inputted a name
+                        if arrow_pos == 1 and player_name != '':
+                            game_state = "main menu"
+                            main_menu_level = 'base'
 
                 # Selection arrow movement
                 if game_state != "active":
@@ -1653,7 +1604,7 @@ if __name__ == "__main__":
 
         # Start
         if game_state == "start":
-            arrow_limit = start_screen(arrow_limit)
+            start_screen()
 
         # Main menu
         elif game_state == "main menu":
