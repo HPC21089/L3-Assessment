@@ -108,7 +108,7 @@ animation_delay = 150
 enemy = 0
 walk_direction = 1
 countdown = 6
-bid_num = 0
+bid_num = 0 #  Stands for "Base inputs display"
 stage_two_moves = "unknown"
 stage_three_moves = "unknown"
 runs_completed = 0
@@ -121,7 +121,7 @@ ignore_next_z_keyup = False
 # ---------- CLASSES ----------
 
 
-class DisplayManager:
+class Display_manager:
     """Handle the window and its sizing."""
 
     def __init__(self, base_res=(1280, 720)):
@@ -335,12 +335,11 @@ enemy_group = pygame.sprite.Group()
 class Wave:
     """Handles the creation of new enemies."""
 
-    def __init__(self, enemy_type, enemies_left, time_between, enemy_count):
+    def __init__(self, enemy_type, enemies_left, time_between):
         """Create peramters needed to spawn new enemies."""
         self.enemy_type = enemy_type
         self.enemies_left = enemies_left
         self.time_between = time_between
-        self.enemy_count = enemy_count
         self.last_spawn_time = 0
         self.enemy_x = 0
         self.enemy_y = 0
@@ -378,10 +377,10 @@ class Wave:
 
 
 # Wave characterisitcs
-wave1 = Wave(snothler, 7, 7, 7)
-wave2 = Wave(boulder_bro, 5, 12, 5)
-wave3 = Wave(little_timmy, 15, 5, 15)
-wave4 = Wave(the_vulture, 10, 7, 10)
+wave1 = Wave(snothler, 7, 7)
+wave2 = Wave(boulder_bro, 5, 12)
+wave3 = Wave(little_timmy, 15, 5)
+wave4 = Wave(the_vulture, 10, 7)
 
 # Works with set_wave to set wave_num to a wave
 waves = {
@@ -423,7 +422,6 @@ class Achievements():
     def check(self, runs_completed, enemies_defeated, wave_num):
         """
         Check if achievements have been completed within a run.
-
         Keep track of how many have been completed in one run.
         """
         # Completion achievements
@@ -568,7 +566,7 @@ class Achievements():
 
 
 achievements = Achievements()
-display = DisplayManager((1280, 720))
+display = Display_manager((1280, 720))
 WINDOW = display.get_window()
 
 
@@ -869,7 +867,7 @@ def set_enemy(enemy):
     return enemy
 
 
-def reset(wave_num, ultimate_charge, cooldown, countdown):
+def reset(wave_num, ultimate_charge, cooldown_charge, countdown):
     """Reset all variables needed to be reset before a new run begins."""
     player.health = 100
     enemy_group.empty()
@@ -879,10 +877,10 @@ def reset(wave_num, ultimate_charge, cooldown, countdown):
     wave4.enemies_left = 10
     wave_num = 1
     ultimate_charge = 0
-    cooldown = 0
+    cooldown_charge = 0
     countdown = 6
 
-    return wave_num, ultimate_charge, cooldown, countdown
+    return wave_num, ultimate_charge, cooldown_charge, countdown
 
 
 def gray_overlay():
@@ -950,18 +948,18 @@ def pause_screen(arrow_limit):
     # Stuff also used in active UI
     multi_ui_display()
 
-    # Gray overlay
-    gray_overlay()
-
     # Arrows
     left_arrow = left_arrow_base
     up_arrow = up_arrow_base
     down_arrow = down_arrow_base
-    right_arrow = right_arrow_base
+    right_arrow = right_arrow_base.convert_alpha()
     WINDOW.blit(left_arrow, (420, 560))
     WINDOW.blit(up_arrow, (540, 560))
     WINDOW.blit(down_arrow, (660, 560))
     WINDOW.blit(right_arrow, (780, 560))
+
+    # Gray overlay
+    gray_overlay()
 
     # Selection Text
     draw_text("CONTINUE", BIG, WHITE, 547.5, 250)
@@ -1107,7 +1105,8 @@ def main_menu(arrow_limit, countdown, last_update_time, bid_num):
         # Snothler
         WINDOW.blit(pygame.transform.flip(
             pygame.image.load(
-                'images/enemies/Snothler-1.png'), True, False), (528, 60))
+                'images/enemies/Snothler-1.png'),
+                True, False), (528, 60))
         draw_text(f"{snothler_name}", MEDIUM, WHITE, 650, 60)
         draw_text(f"Health: {snothler_health}", SMALL, WHITE, 650, 80)
         draw_text(f"Damage: {snothler_damage}", SMALL, WHITE, 650, 95)
@@ -1115,7 +1114,8 @@ def main_menu(arrow_limit, countdown, last_update_time, bid_num):
         # Boulder Bro
         WINDOW.blit(pygame.transform.flip(
             pygame.image.load(
-                'images/enemies/Boulder-Bro-Stationary.png'), True, False),
+                'images/enemies/Boulder-Bro-Stationary.png').convert_alpha(),
+                True, False),
                 (498, 245))
         draw_text(f"{bro_name}", MEDIUM, WHITE, 650, 245)
         draw_text(f"Health: {bro_health}", SMALL, WHITE, 650, 265)
@@ -1124,7 +1124,8 @@ def main_menu(arrow_limit, countdown, last_update_time, bid_num):
         # Little Timmy
         WINDOW.blit(pygame.transform.flip(
             pygame.image.load(
-                'images/enemies/Little-Timmy.png'), True, False), (528, 455))
+                'images/enemies/Little-Timmy.png'),
+                True, False), (528, 455))
         draw_text(f"{timmy_name}", MEDIUM, WHITE, 650, 455)
         draw_text(f"Health: {timmy_health}", SMALL, WHITE, 650, 475)
         draw_text(f"Damage: {timmy_damage}", SMALL, WHITE, 650, 490)
@@ -1133,7 +1134,8 @@ def main_menu(arrow_limit, countdown, last_update_time, bid_num):
         WINDOW.blit(
             pygame.transform.flip(
                 pygame.image.load(
-                    'images/enemies/The-Vulture.png'), True, False),
+                    'images/enemies/The-Vulture.png').convert_alpha(),
+                    True, False),
                     (480, 560))
         draw_text(f"{vulture_name}", MEDIUM, WHITE, 650, 560)
         draw_text(f"Health: {vulture_health}", SMALL, WHITE, 650, 580)
@@ -1189,8 +1191,8 @@ def main_menu(arrow_limit, countdown, last_update_time, bid_num):
             floss_name = f" - {COMBOS['combo5']['name']}"
         else:
             (hype_arrow_one, hype_arrow_two, hype_arrow_three, hype_arrow_four,
-             floss_arrow_one, floss_arrow_two, floss_arrow_three,
-             floss_arrow_four) = unknown_arrow
+             floss_arrow_one, floss_arrow_two, floss_arrow_three, floss_arrow_four) = [unknown_arrow] * 8
+
             hype_name = floss_name = UKNOWN_WITH_HYPHEN
 
         # Display stage 2 combos
@@ -1227,7 +1229,7 @@ def main_menu(arrow_limit, countdown, last_update_time, bid_num):
             flippin_name = f" - {COMBOS['combo7']['name']}"
         else:
             (flippin_arrow_one, flippin_arrow_two, flippin_arrow_three,
-             flippin_arrow_four) = unknown_arrow
+             flippin_arrow_four) = [unknown_arrow] * 4
             flippin_name = UKNOWN_WITH_HYPHEN
 
         # Display stage 3 combos
@@ -1430,6 +1432,7 @@ if __name__ == "__main__":
                                     ultimate_charge = 0
                                 else:
                                     output_combo = 'failed combo'
+                                    inputs  = []
                             else:
                                 # Reset inputs if fail
                                 if output_combo == 'failed combo':
@@ -1458,6 +1461,7 @@ if __name__ == "__main__":
                                 oldest = enemy_group.sprites()[0]
                                 oldest.health -= COMBOS[output_combo]['damage']
 
+
                                 # Kill enemy if health reaches 0
                                 if oldest.health <= 0:
                                     oldest.kill()
@@ -1470,7 +1474,7 @@ if __name__ == "__main__":
                         if event.key == pygame.K_x:
                             inputs = []
 
-                # Limits the number of recorded inputs at a time to 4
+                # Limits the number of recorded inputs for a combo at a time to 4
                 if len(inputs) > MAX_INPUTS:
                     inputs.pop(0)
 
@@ -1499,12 +1503,13 @@ if __name__ == "__main__":
                             # New run
                             if arrow_pos == 1:
                                 (wave_num, ultimate_charge,
-                                 cooldown, countdown) = reset(
+                                 cooldown_charge, countdown) = reset(
                                      wave_num, ultimate_charge,
-                                     cooldown, countdown)
+                                     cooldown_charge, countdown)
                                 game_state = "active"
                             # Back to main menu
                             if arrow_pos == 2:
+                                arrow_pos = 1
                                 game_state = "main menu"
                                 main_menu_level = "base"
 
@@ -1613,14 +1618,15 @@ if __name__ == "__main__":
                     arrow_limit, countdown, last_update_time, bid_num)
             achievements.ach_ban_x = -520
             achievements.run_achievements = 0
-            (wave_num, ultimate_charge, cooldown, countdown
-             ) = reset(wave_num, ultimate_charge, cooldown, countdown)
+            (wave_num, ultimate_charge, cooldown_charge, countdown
+             ) = reset(wave_num, ultimate_charge, cooldown_charge, countdown)
 
         # Active
         elif game_state == "active":
             # Cooldown animation
             cooldown, cooldown_charge = on_cooldown(cooldown, cooldown_charge)
 
+            # Blitting enemies
             enemy_x, enemy_y = wave.enemy_spawn()
             enemy_group.draw(WINDOW)
             enemy_group.update()
@@ -1655,6 +1661,8 @@ if __name__ == "__main__":
                 # Increase stats
                 total_runs += 1
                 runs_completed += 1
+                run_achievements = achievements.check(
+                    runs_completed, enemies_defeated, wave_num)
                 # Switch to win screen
                 game_state = 'win'
 
